@@ -9,14 +9,19 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('studios', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
-
+public function up(): void
+{
+    Schema::create('studios', function (Blueprint $table) {
+        $table->id();
+        $table->string('name'); // Untuk nama studio (contoh: Studio 1)
+        $table->integer('capacity'); // Untuk jumlah kapasitas kursi
+        
+        // Menggunakan enum agar status lebih terstruktur dan aman
+        $table->enum('status', ['Active', 'Maintenance'])->default('Active'); 
+        
+        $table->timestamps();
+    });
+}
     /**
      * Reverse the migrations.
      */
