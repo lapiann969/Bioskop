@@ -11,15 +11,12 @@ return new class extends Migration
      */
 public function up(): void
 {
-    Schema::create('studios', function (Blueprint $table) {
-        $table->id();
-        $table->string('name'); // Untuk nama studio (contoh: Studio 1)
-        $table->integer('capacity'); // Untuk jumlah kapasitas kursi
-        
-        // Menggunakan enum agar status lebih terstruktur dan aman
-        $table->enum('status', ['Active', 'Maintenance'])->default('Active'); 
-        
-        $table->timestamps();
+    // Pastikan nama tabelnya 'genres' (pakai 's') ya agar sesuai standar Laravel
+    Schema::create('genres', function (Blueprint $table) {
+        $table->id(); // Ini otomatis membuat kolom 'id'
+        $table->string('name'); // Ini untuk 'nama' genre
+        $table->text('description')->nullable(); // Ini untuk 'deskripsi', nullable() artinya boleh dikosongkan
+        $table->timestamps(); // Ini otomatis membuat kolom created_at dan updated_at
     });
 }
     /**
