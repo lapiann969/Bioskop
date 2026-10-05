@@ -9,13 +9,15 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('promos', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+public function up(): void
+{
+    Schema::create('seats', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('studio_id')->constrained()->cascadeOnDelete();
+        $table->string('seat_number'); // Contoh: A1, A2, B1
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.
