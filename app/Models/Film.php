@@ -3,17 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Film extends Model
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'title',
+        'description',
+        'duration',
+        'poster_url',
+        'status',
+    ];
 
-    public function genres()
-    {
-        return $this->belongsToMany(Genre::class); // Relasi ke pivot film_genre
-    }
-
-    public function schedules()
+    public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
     }

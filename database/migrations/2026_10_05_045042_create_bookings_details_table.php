@@ -24,8 +24,8 @@ public function up(): void
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        Schema::dropIfExists('bookings_details');
-    }
+   public function down(): void
+{
+    Schema::dropIfExists('booking_details');
+}
 };
