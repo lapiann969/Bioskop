@@ -23,7 +23,6 @@ class StudioSeeder extends Seeder
                 'capacity' => 50, // Tambahkan baris ini
             ]);
 
-            // 2. Buat otomatis kursi A1-E10 untuk studio ini
             foreach ($rows as $row) {
                 for ($i = 1; $i <= 10; $i++) {
                     Seat::create([
