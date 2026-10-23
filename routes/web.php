@@ -3,13 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FilmController;
-use App\Http\Controllers\AuthController; // Tambahkan pemanggilan AuthController
+use App\Http\Controllers\AuthController; 
 
-// Halaman Utama
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/home', [HomeController::class, 'index'])->name('home.dashboard');
 
-// Route Penarikan Data API TMDB
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])->name('films.fetch-tmdb');
 
 
