@@ -1,57 +1,61 @@
-@extends('layouts.admin')
-
-@section('content')
-<div class="container px-6 mx-auto grid">
-    <div class="flex justify-between items-center my-6">
-        <h2 class="text-2xl font-semibold text-gray-700">Daftar Film</h2>
-        <a href="{{ route('admin.films.create') }}" class="px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-purple-600 border border-transparent rounded-lg active:bg-purple-600 hover:bg-purple-700 focus:outline-none focus:shadow-outline-purple">
-            + Tambah Film
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-            {{ session('success') }}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kelola Film - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>🎬 Daftar Film</h3>
+            <div>
+                <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">Kembali ke Dashboard</a>
+                <a href="{{ route('admin.films.create') }}" class="btn btn-primary">+ Tambah Film Manual</a>
+            </div>
         </div>
-    @endif
 
-    <div class="w-full overflow-hidden rounded-xs shadow-xs border border-gray-200 bg-white">
-        <div class="w-full overflow-x-auto">
-            <table class="w-full whitespace-no-wrap">
-                <thead>
-                    <tr class="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
-                        <th class="px-4 py-3">No</th>
-                        <th class="px-4 py-3">Judul</th>
-                        <th class="px-4 py-3">Genre</th>
-                        <th class="px-4 py-3">Durasi</th>
-                        <th class="px-4 py-3">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y text-gray-700">
-                    @forelse($films as $film)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm">{{ $loop->iteration }}</td>
-                            <td class="px-4 py-3 text-sm font-semibold">{{ $film->title }}</td>
-                            <td class="px-4 py-3 text-sm">{{ $film->genre->name ?? '-' }}</td>
-                            <td class="px-4 py-3 text-sm">{{ $film->duration }} Menit</td>
-                            <td class="px-4 py-3 text-sm flex space-x-2">
-                                <a href="{{ route('admin.films.show', $film->id) }}" class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Detail</a>
-                                <a href="{{ route('admin.films.edit', $film->id) }}" class="px-3 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600">Edit</a>
-                                <form action="{{ route('admin.films.destroy', $film->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
+        @if(session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>No</th>
+                            <th>Judul Film</th>
+                            <th>Ringkasan</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($films as $key =>$film)
+                        <tr>
+                            <td>{{ $key + 1 }}</td>
+                            <td class="fw-bold">{{ $film->title }}</td>
+                            <td>{{ Str::limit($film->overview ?? 'Tidak ada ringkasan', 50) }}</td>
+                            <td class="text-center">
+                                <a href="{{ route('admin.films.show', $film->id) }}" class="btn btn-info btn-sm text-white">Lihat</a>
+                                <a href="{{ route('admin.films.edit', $film->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                
+                                <form action="{{ route('admin.films.destroy', $film->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus film ini?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Hapus</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                                 </form>
                             </td>
                         </tr>
-                    @empty
+                        @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-3 text-center text-gray-500">Belum ada data film.</td>
+                            <td colspan="4" class="text-center">Belum ada data film.</td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
-@endsection
+</body>
+</html>

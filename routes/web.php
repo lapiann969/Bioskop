@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Models\Film;
+
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FilmController;
 use App\Http\Controllers\AuthController; 
@@ -24,54 +26,61 @@ use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\CustomerController;
 
->>>>>>> 1bf1292 (membuat controller admin dan route nya)
-
+// ==========================================
+// 1. PUBLIC ROUTES (BISA DIAKSES TANPA LOGIN)
+// ==========================================
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/home', [HomeController::class, 'index'])->name('home.dashboard');
-
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])->name('films.fetch-tmdb');
 
-
+// Autentikasi Login & Logout
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-
-Route::get('/admin/dashboard', function () { 
-    return 'Selamat datang Admin! Ini halaman khusus admin.'; 
-})->name('admin.dashboard');
-
-Route::get('/beranda', function () { 
-    return 'Selamat datang Pelanggan! Silakan pesan tiket bioskop di sini.'; 
-})->name('customer.dashboard');
-=======
+// ==========================================
+// 2. CUSTOMER ROUTES (WAJIB LOGIN)
+// ==========================================
 Route::middleware('auth')->group(function () {
+    // Halaman Beranda Pelanggan (/home)
+    Route::get('/home', function () {
+        $films = Film::latest()->get(); // Mengambil semua data film terbaru
+        return view('customer.home', compact('films'));
+    })->name('customer.dashboard');
 
-Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
-Route::get('/schedules/{schedule}', [ScheduleController::class, 'show'])->name('schedules.show');
-Route::get('/schedules/{schedule}/seats', [SeatController::class, 'index'])->name('seats.index');
-Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
-Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
-Route::get('/bookings/{booking}/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
-Route::get('/bookings/{booking}/payment', [PaymentController::class, 'show'])->name('payments.show');
-Route::get('/bookings/{booking}/ticket', [ETicketController::class, 'show'])->name('tickets.show');
-Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
-Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    // Halaman Beranda Pelanggan (/beranda)
+    Route::get('/beranda', function () {
+        $films = Film::latest()->get();
+        return view('customer.home', compact('films'));
+    })->name('customer.beranda');
+
+    Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
+    Route::get('/schedules/{schedule}', [ScheduleController::class, 'show'])->name('schedules.show');
+    Route::get('/schedules/{schedule}/seats', [SeatController::class, 'index'])->name('seats.index');
+    Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
+    Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::get('/bookings/{booking}/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+    Route::get('/bookings/{booking}/payment', [PaymentController::class, 'show'])->name('payments.show');
+    Route::get('/bookings/{booking}/ticket', [ETicketController::class, 'show'])->name('tickets.show');
+    Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
 });
 
+// ==========================================
+// 3. ADMIN ROUTES (KHUSUS ADMIN)
+// ==========================================
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard Admin diproses oleh DashboardController
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::resource('films', AdminFilmController::class);
-Route::resource('genres', GenreController::class);
-Route::resource('studios', StudioController::class);
-Route::resource('seats', AdminSeatController::class);
-Route::resource('schedules', AdminScheduleController::class);
-Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
-Route::get('/bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
-Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
-Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
-Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
-Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+    Route::resource('films', AdminFilmController::class);
+    Route::resource('genres', GenreController::class);
+    Route::resource('studios', StudioController::class);
+    Route::resource('seats', AdminSeatController::class);
+    Route::resource('schedules', AdminScheduleController::class);
+    Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
+    Route::get('/bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
+    Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
 });
->>>>>>> 1bf1292 (membuat controller admin dan route nya)
