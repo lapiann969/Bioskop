@@ -56,7 +56,8 @@
                                 {{ Str::limit($film->description ?? 'Tidak ada ringkasan cerita.', 75) }}
                             </p>
                         </div>
-                        <a href="{{ route('schedules.index') }}" class="btn btn-warning w-100 fw-bold mt-3">Pesan Tiket</a>
+                       <a href="{{ route('schedules.index', ['film_id' => $film->id]) }}" class="btn btn-warning w-100 fw-bold mt-3"> Pesan Tiket
+                        </a>
                     </div>
                 </div>
             </div>

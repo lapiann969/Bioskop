@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Schedule extends Model
 {
+    // ==========================================
+    // 👈 PERBAIKAN: 'show_date' ditambahkan di sini
+    // ==========================================
     protected $fillable = [
         'film_id',
         'studio_id',
+        'show_date', 
         'show_time',
         'price',
     ];
@@ -18,6 +22,7 @@ class Schedule extends Model
     protected function casts(): array
     {
         return [
+            'show_date' => 'date',      // Tambahkan ini agar tanggal terbaca rapi
             'show_time' => 'datetime',
             'price' => 'decimal:2',
         ];

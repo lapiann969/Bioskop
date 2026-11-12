@@ -1,67 +1,70 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container px-6 mx-auto grid">
-    <h2 class="my-6 text-2xl font-semibold text-gray-700">Tambah Jadwal Tayang</h2>
+<div class="container mt-4">
+    
+    <!-- Bagian Error Validasi -->
+    @if ($errors->any())
+        <div class="alert alert-danger mx-auto" style="max-width: 600px;">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
-    <div class="px-4 py-3 mb-8 bg-white rounded-lg shadow-md border border-gray-200">
-        <form action="{{ route('admin.schedules.store') }}" method="POST">
-            @csrf
 
-            <!-- Relasi ke Film -->
-            <div class="mb-4">
-                <label class="block text-sm text-gray-700 font-medium">Pilih Film</label>
-                <select name="film_id" class="w-full mt-1 border border-gray-300 rounded-lg p-2 focus:ring focus:ring-purple-300" required>
-                    <option value="">-- Pilih Film --</option>
-                    @foreach($films as $film)
-                        <option value="{{ $film->id }}" {{ old('film_id') == $film->id ? 'selected' : '' }}>
-                            {{ $film->title }} ({{ $film->duration }} Menit)
-                        </option>
-                    @endforeach
-                </select>
-                @error('film_id') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Relasi ke Studio -->
-            <div class="mb-4">
-                <label class="block text-sm text-gray-700 font-medium">Pilih Studio</label>
-                <select name="studio_id" class="w-full mt-1 border border-gray-300 rounded-lg p-2 focus:ring focus:ring-purple-300" required>
-                    <option value="">-- Pilih Studio --</option>
-                    @foreach($studios as $studio)
-                        <option value="{{ $studio->id }}" {{ old('studio_id') == $studio->id ? 'selected' : '' }}>
-                            {{ $studio->name }} (Kapasitas: {{ $studio->capacity }} Kursi)
-                        </option>
-                    @endforeach
-                </select>
-                @error('studio_id') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Tanggal & Waktu -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm text-gray-700 font-medium">Tanggal Tayang</label>
-                    <input type="date" name="show_date" value="{{ old('show_date') }}" class="w-full mt-1 border border-gray-300 rounded-lg p-2" required>
-                    @error('show_date') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+    <div class="card shadow-sm mx-auto" style="max-width: 600px;">
+        <div class="card-header bg-primary text-white fw-bold">
+            Tambah Jadwal Tayang
+        </div>
+        <div class="card-body">
+            <form action="{{ route('admin.schedules.store') }}" method="POST">
+                @csrf
+                
+                <div class="mb-3">
+                    <label class="form-label">Pilih Film</label>
+                    <select name="film_id" class="form-select" required>
+                        <option value="">-- Pilih Film --</option>
+                        @foreach($films as $f)
+                            <option value="{{ $f->id }}">{{ $f->title }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-700 font-medium">Jam Tayang</label>
-                    <input type="time" name="show_time" value="{{ old('show_time') }}" class="w-full mt-1 border border-gray-300 rounded-lg p-2" required>
-                    @error('show_time') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+
+                <div class="mb-3">
+                    <label class="form-label">Pilih Studio</label>
+                    <select name="studio_id" class="form-select" required>
+                        <option value="">-- Pilih Studio --</option>
+                        @foreach($studios as $s)
+                            <option value="{{ $s->id }}">{{ $s->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
-            </div>
 
-            <!-- Harga Tiket -->
-            <div class="mb-4">
-                <label class="block text-sm text-gray-700 font-medium">Harga Tiket (Rp)</label>
-                <input type="number" name="price" value="{{ old('price') }}" class="w-full mt-1 border border-gray-300 rounded-lg p-2" required placeholder="Contoh: 35000">
-                @error('price') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-            </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tanggal Tayang</label>
+                        <input type="date" name="show_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Jam Tayang</label>
+                        <input type="time" name="show_time" class="form-control" required>
+                    </div>
+                </div>
 
-            <div class="flex justify-end space-x-2">
-                <a href="{{ route('admin.schedules.index') }}" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Batal</a>
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Jadwal</button>
-            </div>
-        </form>
+                <div class="mb-4">
+                    <label class="form-label">Harga Tiket (Rp)</label>
+                    <input type="number" name="price" class="form-control" value="35000" required>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ route('admin.schedules.index') }}" class="btn btn-secondary">Batal</a>
+                    <button type="submit" class="btn btn-primary">Simpan Jadwal</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+</div> 
 @endsection
