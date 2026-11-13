@@ -21,16 +21,14 @@ class FilmController extends Controller
     }
 
     /**
-     * Mengambil ID film yang sedang tayang di Indonesia.
+     * Mengambil ID film yang sedang tayang di Indonesia dari TMDB.
      */
     private function getNowPlayingIds()
     {
         return Cache::remember('tmdb_now_playing_ids_id', 1800, function () {
-
             $ids = [];
 
             for ($page = 1; $page <= 5; $page++) {
-
                 $response = Http::timeout(15)->get(
                     $this->getBaseUrl() . '/movie/now_playing',
                     [
@@ -59,10 +57,11 @@ class FilmController extends Controller
     }
 
     /**
-     * Menentukan status film.
+     * Menentukan status film (Showing, Upcoming, atau Ended).
      */
     private function getFilmStatus($movie, $nowPlayingIds)
     {
+        // Jika ada di daftar tayang TMDB saat ini
         if (in_array($movie['id'], $nowPlayingIds)) {
             return 'Showing';
         }
@@ -74,6 +73,7 @@ class FilmController extends Controller
         }
 
         try {
+            // Jika tanggal rilis masih di masa depan
             return Carbon::parse($releaseDate)->isFuture()
                 ? 'Upcoming'
                 : 'Ended';
@@ -83,7 +83,7 @@ class FilmController extends Controller
     }
 
     /**
-     * Menyimpan film dari TMDB ke database.
+     * Menyimpan atau memperbarui data film dari TMDB ke database lokal.
      */
     private function saveMovie($movie, $nowPlayingIds)
     {
@@ -101,17 +101,14 @@ class FilmController extends Controller
             'tmdb_id' => $movie['id'],
             'title' => $title,
             'description' => $movie['overview'] ?? '',
-            'duration' => 120,
+            'duration' => 120, // Default durasi
             'poster_url' => $poster,
-            'status' => $this->getFilmStatus(
-                $movie,
-                $nowPlayingIds
-            ),
+            'status' => $this->getFilmStatus($movie, $nowPlayingIds),
         ];
 
         $film = Film::where('tmdb_id', $movie['id'])->first();
 
-        // Menghindari duplikasi film yang sudah ada sebelumnya.
+        // Cek duplikasi berdasarkan judul jika tmdb_id tidak ketemu
         if (!$film) {
             $film = Film::whereRaw(
                 'LOWER(title) = ?',
@@ -127,23 +124,20 @@ class FilmController extends Controller
     }
 
     /**
-     * Pencarian dan daftar film.
+     * Halaman daftar film dan pencarian untuk pelanggan.
      */
     public function index(Request $request)
     {
         $search = trim($request->input('search', ''));
 
-        // Jika pengguna mencari film, cari juga langsung ke TMDB.
+        // 1. Jika ada kata kunci pencarian, tarik dulu datanya dari TMDB
         if ($search !== '') {
-
             try {
-
                 $response = Http::timeout(20)->get(
                     $this->getBaseUrl() . '/search/movie',
                     [
                         'api_key' => $this->getApiKey(),
-                        'language' => 'id-ID',
-                        'region' => 'ID',
+                        // Kita lepas limit bahasa agar pencarian huruf Jepang/Romawi lebih luas
                         'query' => $search,
                         'include_adult' => false,
                         'page' => 1,
@@ -151,51 +145,41 @@ class FilmController extends Controller
                 );
 
                 if ($response->successful()) {
-
                     $movies = $response->json('results', []);
-
                     $nowPlayingIds = $this->getNowPlayingIds();
 
                     foreach ($movies as $movie) {
-                        $this->saveMovie(
-                            $movie,
-                            $nowPlayingIds
-                        );
+                        $this->saveMovie($movie, $nowPlayingIds);
                     }
                 }
-
             } catch (\Exception $e) {
-
                 report($e);
-
             }
         }
 
-        // Ambil film dari database lokal.
+        // 2. Ambil data film dari database lokal
         $films = Film::query()
-            ->whereIn('status', ['Showing', 'Upcoming'])
+            // HANYA tampilkan film yang sedang tayang (Showing) atau akan datang (Upcoming)
+            ->whereIn('status', ['Showing', 'Upcoming']) 
             ->when($search !== '', function ($query) use ($search) {
-
-                $query->where('title', 'like', '%' . $search . '%');
-
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%');
+                });
             })
             ->latest()
             ->paginate(12)
             ->withQueryString();
 
-        return view(
-            'customer.films.index',
-            compact('films', 'search')
-        );
+        return view('customer.films.index', compact('films', 'search'));
     }
 
     /**
-     * Mengambil film yang sedang tayang dari TMDB.
+     * Tombol manual untuk mengambil data Now Playing dari TMDB (biasanya untuk Admin).
      */
     public function fetchFromTMDB()
     {
         try {
-
             $nowPlayingIds = $this->getNowPlayingIds();
 
             if (empty($nowPlayingIds)) {
@@ -208,7 +192,6 @@ class FilmController extends Controller
             $count = 0;
 
             for ($page = 1; $page <= 5; $page++) {
-
                 $response = Http::timeout(20)->get(
                     $this->getBaseUrl() . '/movie/now_playing',
                     [
@@ -224,12 +207,7 @@ class FilmController extends Controller
                 }
 
                 foreach ($response->json('results', []) as $movie) {
-
-                    $existing = Film::where(
-                        'tmdb_id',
-                        $movie['id']
-                    )->exists();
-
+                    $existing = Film::where('tmdb_id', $movie['id'])->exists();
                     $this->saveMovie($movie, $nowPlayingIds);
 
                     if (!$existing) {
@@ -248,21 +226,11 @@ class FilmController extends Controller
             ]);
 
         } catch (\Exception $e) {
-
             report($e);
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat menghubungi TMDB.'
             ], 500);
         }
-    }
-
-        /**
-     * Menampilkan detail film.
-     */
-    public function show(Film $film)
-    {
-        return view('customer.films.show', compact('film'));
     }
 }

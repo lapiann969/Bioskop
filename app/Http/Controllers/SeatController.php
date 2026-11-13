@@ -3,24 +3,51 @@
 namespace App\Http\Controllers;
 
 use App\Models\Schedule;
-use App\Models\Seat;
-use App\Models\Booking; // Pastikan model Booking dipanggil jika ada tabel transaksi
+// use App\Models\Booking; // Dimatikan sementara sampai tabelnya siap
 use Illuminate\Http\Request;
 
 class SeatController extends Controller
 {
-    public function index($schedule_id)
+    public function index($scheduleId)
     {
-        // Ambil data jadwal beserta film dan studionya
-        $schedule = Schedule::with(['film', 'studio'])->findOrFail($schedule_id);
+        // 1. Ambil data jadwal, film, dan studio
+        $schedule = Schedule::with(['film', 'studio'])->findOrFail($scheduleId);
+
+        // 2. Matikan sementara query Booking agar tidak error SQL (karena tabel belum siap)
+        $bookedSeats = []; 
         
-        // Ambil semua kursi yang ada di studio tersebut
-        $seats = Seat::where('studio_id', $schedule->studio_id)->get();
+        /* Nanti kita aktifkan ini kalau tabel bookings sudah kamu buat
+        if (class_exists(\App\Models\Booking::class)) {
+            $bookedSeats = \App\Models\Booking::where('schedule_id', $scheduleId)
+                                  ->pluck('seat_number')
+                                  ->toArray();
+        }
+        */
 
-        // (Opsional) Ambil ID kursi yang sudah dipesan pada jadwal ini agar tidak bisa diklik lagi
-        // $bookedSeats = Booking::where('schedule_id', $schedule_id)->pluck('seat_id')->toArray();
-        $bookedSeats = []; // Sementara dikosongkan jika tabel relasi booking belum siap
+        // 3. Buat data kursi (A1 - E10) buatan agar sesuai dengan kode View (blade) kamu
+        $seats = [];
+        $rows = ['A', 'B', 'C', 'D', 'E'];
+        foreach ($rows as $row) {
+            for ($i = 1; $i <= 10; $i++) {
+                $seats[] = (object) [
+                    'id' => $row . $i,
+                    'seat_number' => $row . $i
+                ];
+            }
+        }
 
-        return view('customer.seats.index', compact('schedule', 'seats', 'bookedSeats'));
+        // Kirim $seats ke view milikmu
+        return view('customer.seats.index', compact('schedule', 'bookedSeats', 'seats'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'selected_seats' => 'required|array'
+        ]);
+
+        // Ini hanya untuk tes apakah kursi yang dipilih berhasil ditangkap
+        return back()->with('success', 'Berhasil memilih kursi: ' . implode(', ', $request->selected_seats));
     }
 }
