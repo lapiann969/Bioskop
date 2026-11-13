@@ -56,11 +56,16 @@
     <div class="row">
         @forelse($schedules as $schedule)
             @php
-                // Menyesuaikan kemungkinan nama kolom tanggal & jam di tabel schedules
-                $tanggal = $schedule->show_date ?? $schedule->date ?? '-';
-                $jam = $schedule->start_time ?? $schedule->show_time ?? '-';
-                $harga = $schedule->price ?? 35000;
-            @endphp
+    $tanggal = $schedule->show_time
+        ? $schedule->show_time->format('d M Y')
+        : '-';
+
+    $jam = $schedule->show_time
+        ? $schedule->show_time->format('H:i')
+        : '-';
+
+    $harga = $schedule->price;
+@endphp
 
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card bg-secondary text-white h-100 border-0 shadow">

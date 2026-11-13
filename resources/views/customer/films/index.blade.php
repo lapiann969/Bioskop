@@ -125,12 +125,10 @@
 
                         </div>
 
-                        <a href="{{ route('schedules.index', ['film_id' => $film->id]) }}"
-                            class="btn btn-warning fw-bold mt-auto">
-
-                            Pesan Tiket
-
-                        </a>
+                        <a href="{{ route('films.show', $film->id) }}"
+   class="btn btn-warning w-100">
+    Detail Film
+</a>
 
                     </div>
 

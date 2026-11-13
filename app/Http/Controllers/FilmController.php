@@ -257,4 +257,12 @@ class FilmController extends Controller
             ], 500);
         }
     }
+
+        /**
+     * Menampilkan detail film.
+     */
+    public function show(Film $film)
+    {
+        return view('customer.films.show', compact('film'));
+    }
 }

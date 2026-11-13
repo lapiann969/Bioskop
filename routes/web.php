@@ -44,6 +44,13 @@ Route::get('/home', function () {
     return redirect()->route('home');
 })->name('home.dashboard');
 
+// detail film
+Route::get('/films/{film}', [FilmController::class, 'show'])
+    ->name('films.show');
+
+Route::get('/schedules', [ScheduleController::class, 'index'])
+    ->name('schedules.index');
+
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
     ->name('films.fetch-tmdb');
 

@@ -12,21 +12,19 @@ class Schedule extends Model
     // 👈 PERBAIKAN: 'show_date' ditambahkan di sini
     // ==========================================
     protected $fillable = [
-        'film_id',
-        'studio_id',
-        'show_date', 
-        'show_time',
-        'price',
-    ];
+    'film_id',
+    'studio_id',
+    'show_time',
+    'price',
+];
 
-    protected function casts(): array
-    {
-        return [
-            'show_date' => 'date',      // Tambahkan ini agar tanggal terbaca rapi
-            'show_time' => 'datetime',
-            'price' => 'decimal:2',
-        ];
-    }
+protected function casts(): array
+{
+    return [
+        'show_time' => 'datetime',
+        'price' => 'decimal:2',
+    ];
+}
 
     public function film(): BelongsTo
     {
