@@ -31,7 +31,18 @@ use App\Http\Controllers\Admin\CustomerController;
 // 1. PUBLIC ROUTES
 // ==========================================
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// Home Customer
+Route::get('/', [HomeController::class, 'index'])
+    ->name('home');
+
+// Daftar Film
+Route::get('/films', [FilmController::class, 'index'])
+    ->name('films.index');
+
+// Route Home lama diarahkan ke Home Customer
+Route::get('/home', function () {
+    return redirect()->route('home');
+})->name('home.dashboard');
 
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
     ->name('films.fetch-tmdb');
