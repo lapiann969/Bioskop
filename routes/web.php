@@ -6,6 +6,7 @@ use App\Models\Film;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\FilmController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\RegisterController;
 
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SeatController;
@@ -39,9 +40,18 @@ Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
 // 2. AUTHENTICATION ROUTES
 // ==========================================
 
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::get('/login', [AuthController::class, 'showLogin'])
+    ->name('login');
+
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::get('/register', [RegisterController::class, 'showRegistrationForm'])
+    ->name('register');
+
+Route::post('/register', [RegisterController::class, 'register']);
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->name('logout');
 
 // ==========================================
 // 3. CUSTOMER ROUTES (WAJIB LOGIN)
