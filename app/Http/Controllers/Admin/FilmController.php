@@ -22,13 +22,14 @@ class FilmController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration' => 'required|integer|min:1',
-            'poster_url' => 'nullable|url|max:2048',
-            'status' => 'required|in:Upcoming,Showing,Ended',
-        ]);
+       $validated = $request->validate([
+    'tmdb_id' => 'nullable|integer|min:1',
+    'title' => 'required|string|max:255',
+    'description' => 'nullable|string',
+    'duration' => 'required|integer|min:1',
+    'poster_url' => 'nullable|url|max:2048',
+    'status' => 'required|in:Upcoming,Showing,Ended',
+]);
 
         Film::create($validated);
 
