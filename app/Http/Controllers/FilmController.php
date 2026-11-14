@@ -21,6 +21,76 @@ class FilmController extends Controller
     }
 
     /**
+     * Mengambil trailer YouTube dari TMDB.
+     * Prioritas: trailer Indonesia, trailer resmi, lalu trailer lainnya.
+     */
+   
+private function getMovieTrailer($tmdbId)
+{
+    if (!$tmdbId) {
+        return null;
+    }
+
+    return Cache::remember(
+        'tmdb_movie_trailer_' . $tmdbId,
+        21600,
+        function () use ($tmdbId) {
+
+            try {
+                // Coba bahasa Indonesia terlebih dahulu,
+                // kemudian bahasa Inggris.
+                foreach (['id-ID', 'en-US'] as $language) {
+
+                    $response = Http::timeout(20)->get(
+                        $this->getBaseUrl() . '/movie/' . $tmdbId . '/videos',
+                        [
+                            'api_key' => $this->getApiKey(),
+                            'language' => $language,
+                        ]
+                    );
+
+                    if (!$response->successful()) {
+                        continue;
+                    }
+
+                    $videos = collect(
+                        $response->json('results', [])
+                    )->filter(function ($video) {
+                        return ($video['site'] ?? '') === 'YouTube'
+                            && ($video['type'] ?? '') === 'Trailer'
+                            && !empty($video['key']);
+                    });
+
+                    if ($videos->isEmpty()) {
+                        continue;
+                    }
+
+                    // Prioritaskan trailer resmi.
+                    $trailer = $videos->first(function ($video) {
+                        return !empty($video['official']);
+                    });
+
+                    // Jika tidak ada trailer resmi,
+                    // gunakan trailer pertama.
+                    $trailer = $trailer ?: $videos->first();
+
+                    return 'https://www.youtube.com/watch?v='
+                        . $trailer['key'];
+                }
+
+                return null;
+
+            } catch (\Exception $e) {
+                report($e);
+
+                return null;
+            }
+        }
+    );
+}
+
+
+    /**
      * Mengambil ID film yang sedang tayang di Indonesia dari TMDB.
      */
     private function getNowPlayingIds()
@@ -64,12 +134,10 @@ class FilmController extends Controller
     {
         $overview = trim($movie['overview'] ?? '');
 
-        // Gunakan sinopsis Indonesia jika tersedia.
         if ($overview !== '') {
             return $overview;
         }
 
-        // Jika kosong, coba ambil sinopsis bahasa Inggris.
         if (!empty($movie['id'])) {
             try {
                 $response = Http::timeout(15)->get(
@@ -94,12 +162,11 @@ class FilmController extends Controller
             }
         }
 
-        // Pertahankan sinopsis lama jika tersedia.
         return $oldDescription ?? '';
     }
 
     /**
-     * Menentukan status film (Showing, Upcoming, atau Ended).
+     * Menentukan status film.
      */
     private function getFilmStatus($movie, $nowPlayingIds)
     {
@@ -137,10 +204,8 @@ class FilmController extends Controller
             ? 'https://image.tmdb.org/t/p/w500' . $movie['poster_path']
             : null;
 
-        // Cari film berdasarkan TMDB ID.
         $film = Film::where('tmdb_id', $movie['id'])->first();
 
-        // Jika tidak ditemukan, cek berdasarkan judul.
         if (!$film) {
             $film = Film::whereRaw(
                 'LOWER(title) = ?',
@@ -160,6 +225,15 @@ class FilmController extends Controller
             'status' => $this->getFilmStatus($movie, $nowPlayingIds),
         ];
 
+        // Ambil trailer otomatis hanya jika admin belum mengisinya.
+        if (empty($film?->trailer_url)) {
+            $trailerUrl = $this->getMovieTrailer($movie['id']);
+
+            if ($trailerUrl) {
+                $data['trailer_url'] = $trailerUrl;
+            }
+        }
+
         if ($film) {
             $film->update($data);
         } else {
@@ -168,7 +242,7 @@ class FilmController extends Controller
     }
 
     /**
-     * Halaman daftar film dan pencarian untuk pelanggan.
+     * Halaman daftar film dan pencarian.
      */
     public function index(Request $request)
     {
@@ -308,25 +382,35 @@ class FilmController extends Controller
                         $movie['id']
                     )->first();
 
-                    // Jangan ubah film yang sudah berstatus Showing.
                     if ($film && $film->status === 'Showing') {
                         continue;
                     }
 
+                    $filmData = [
+                        'title' => $movie['title'],
+                        'description' => $this->getMovieDescription(
+                            $movie,
+                            $film?->description
+                        ),
+                        'duration' => $film->duration ?? 120,
+                        'poster_url' => !empty($movie['poster_path'])
+                            ? 'https://image.tmdb.org/t/p/w500' . $movie['poster_path']
+                            : ($film->poster_url ?? null),
+                        'status' => 'Upcoming',
+                    ];
+
+                    // Jangan timpa trailer yang sudah diisi admin.
+                    if (empty($film?->trailer_url)) {
+                        $trailerUrl = $this->getMovieTrailer($movie['id']);
+
+                        if ($trailerUrl) {
+                            $filmData['trailer_url'] = $trailerUrl;
+                        }
+                    }
+
                     Film::updateOrCreate(
                         ['tmdb_id' => $movie['id']],
-                        [
-                            'title' => $movie['title'],
-                            'description' => $this->getMovieDescription(
-                                $movie,
-                                $film?->description
-                            ),
-                            'duration' => $film->duration ?? 120,
-                            'poster_url' => !empty($movie['poster_path'])
-                                ? 'https://image.tmdb.org/t/p/w500' . $movie['poster_path']
-                                : ($film->poster_url ?? null),
-                            'status' => 'Upcoming',
-                        ]
+                        $filmData
                     );
 
                     $count++;
@@ -358,11 +442,13 @@ class FilmController extends Controller
         }
     }
 
-        public function show($id)
+    /**
+     * Halaman detail film.
+     */
+    public function show($id)
     {
         $film = Film::findOrFail($id);
 
         return view('customer.films.show', compact('film'));
     }
-
 }
