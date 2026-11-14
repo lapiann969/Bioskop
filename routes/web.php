@@ -39,10 +39,10 @@ Route::get('/', [HomeController::class, 'index'])
 Route::get('/films', [FilmController::class, 'index'])
     ->name('films.index');
 
-// Route Home lama diarahkan ke Home Customer
+// Home lama
 Route::get('/home', function () {
     return redirect()->route('home');
-})->name('home.dashboard');
+})->name('customer.dashboard');
 
 // detail film
 Route::get('/films/{film}', [FilmController::class, 'show'])
@@ -53,6 +53,9 @@ Route::get('/schedules', [ScheduleController::class, 'index'])
 
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
     ->name('films.fetch-tmdb');
+
+Route::get('/fetch-upcoming', [FilmController::class, 'fetchUpcomingFromTMDB'])
+    ->name('films.fetch-upcoming');
 
 // ==========================================
 // 2. AUTHENTICATION ROUTES
@@ -77,15 +80,13 @@ Route::post('/logout', [AuthController::class, 'logout'])
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/home', function () {
-        $films = Film::latest()->get();
-        return view('customer.home', compact('films'));
-    })->name('customer.dashboard');
+    Route::get('/home', [HomeController::class, 'index'])
+    ->middleware('auth')
+    ->name('customer.dashboard');
 
-    Route::get('/beranda', function () {
-        $films = Film::latest()->get();
-        return view('customer.home', compact('films'));
-    })->name('customer.beranda');
+    Route::get('/beranda', [HomeController::class, 'index'])
+    ->middleware('auth')
+    ->name('customer.beranda');
 
     Route::get('/schedules', [ScheduleController::class, 'index'])
         ->name('schedules.index');

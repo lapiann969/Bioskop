@@ -6,20 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::table('films', function (Blueprint $table) {
-            $table->unsignedBigInteger('tmdb_id')
-                ->nullable()
-                ->unique();
-        });
-    }
+    
+public function up(): void
+{
+    Schema::table('films', function (Blueprint $table) {
+        $table->unsignedBigInteger('tmdb_id')
+            ->nullable()
+            ->unique();
+    });
+}
 
-    public function down(): void
-    {
-        Schema::table('films', function (Blueprint $table) {
-            $table->dropUnique(['tmdb_id']);
-            $table->dropColumn('tmdb_id');
-        });
-    }
+public function down(): void
+{
+    Schema::table('films', function (Blueprint $table) {
+        $table->dropUnique(['tmdb_id']);
+        $table->dropColumn('tmdb_id');
+    });
+}
+
 };

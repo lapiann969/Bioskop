@@ -127,53 +127,33 @@ class FilmController extends Controller
      * Halaman daftar film dan pencarian untuk pelanggan.
      */
     public function index(Request $request)
-    {
-        $search = trim($request->input('search', ''));
+{
+    $search = trim($request->input('search', ''));
+    $status = $request->input('status');
 
-        // 1. Jika ada kata kunci pencarian, tarik dulu datanya dari TMDB
-        if ($search !== '') {
-            try {
-                $response = Http::timeout(20)->get(
-                    $this->getBaseUrl() . '/search/movie',
-                    [
-                        'api_key' => $this->getApiKey(),
-                        // Kita lepas limit bahasa agar pencarian huruf Jepang/Romawi lebih luas
-                        'query' => $search,
-                        'include_adult' => false,
-                        'page' => 1,
-                    ]
-                );
+    $films = Film::query()
+        ->whereIn('status', ['Showing', 'Upcoming'])
 
-                if ($response->successful()) {
-                    $movies = $response->json('results', []);
-                    $nowPlayingIds = $this->getNowPlayingIds();
-
-                    foreach ($movies as $movie) {
-                        $this->saveMovie($movie, $nowPlayingIds);
-                    }
-                }
-            } catch (\Exception $e) {
-                report($e);
+        ->when(
+            in_array($status, ['Showing', 'Upcoming']),
+            function ($query) use ($status) {
+                $query->where('status', $status);
             }
-        }
+        )
 
-        // 2. Ambil data film dari database lokal
-        $films = Film::query()
-            // HANYA tampilkan film yang sedang tayang (Showing) atau akan datang (Upcoming)
-            ->whereIn('status', ['Showing', 'Upcoming']) 
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('title', 'like', '%' . $search . '%')
-                      ->orWhere('description', 'like', '%' . $search . '%');
-                });
-            })
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
+        ->when($search !== '', function ($query) use ($search) {
+            $query->where('title', 'like', '%' . $search . '%');
+        })
 
-        return view('customer.films.index', compact('films', 'search'));
-    }
+        ->latest()
+        ->paginate(12)
+        ->withQueryString();
 
+    return view(
+        'customer.films.index',
+        compact('films', 'search')
+    );
+}
     /**
      * Tombol manual untuk mengambil data Now Playing dari TMDB (biasanya untuk Admin).
      */
@@ -233,4 +213,94 @@ class FilmController extends Controller
             ], 500);
         }
     }
+
+
+public function fetchUpcomingFromTMDB()
+{
+    try {
+
+        $count = 0;
+        $apiCount = 0;
+        $totalResults = 0;
+
+        for ($page = 1; $page <= 5; $page++) {
+
+            $response = Http::timeout(20)->get(
+                $this->getBaseUrl() . '/movie/upcoming',
+                [
+                    'api_key' => $this->getApiKey(),
+                    'language' => 'id-ID',
+                    'region' => 'ID',
+                    'page' => $page,
+                ]
+            );
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $response->body()
+                ], 500);
+            }
+
+            $movies = $response->json('results', []);
+
+            $totalResults = $response->json('total_results', 0);
+
+            foreach ($movies as $movie) {
+
+                $apiCount++;
+
+                if (empty($movie['id']) || empty($movie['title'])) {
+                    continue;
+                }
+
+                $film = Film::where('tmdb_id', $movie['id'])->first();
+
+                if ($film && $film->status === 'Showing') {
+                    continue;
+                }
+
+                Film::updateOrCreate(
+                    ['tmdb_id' => $movie['id']],
+                    [
+                        'title' => $movie['title'],
+                        'description' => $movie['overview'] ?? '',
+                        'duration' => $film->duration ?? 120,
+                        'poster_url' => !empty($movie['poster_path'])
+                            ? 'https://image.tmdb.org/t/p/w500' . $movie['poster_path']
+                            : null,
+                        'status' => 'Upcoming',
+                    ]
+                );
+
+                $count++;
+            }
+
+            if ($page >= $response->json('total_pages', 1)) {
+                break;
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'total_film_dari_tmdb' => $totalResults,
+            'film_diperiksa' => $apiCount,
+            'film_diproses' => $count,
+            'total_upcoming_di_database' => Film::where(
+                'status',
+                'Upcoming'
+            )->count(),
+        ]);
+
+    } catch (\Exception $e) {
+
+        report($e);
+
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }

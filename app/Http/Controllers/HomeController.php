@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Film;
 
 class HomeController extends Controller
@@ -13,11 +12,20 @@ class HomeController extends Controller
     }
 
     public function index()
-    {
-        $films = Film::where('status', 'Showing')
-            ->latest()
-            ->get();
+{
+    $showingFilms = Film::where('status', 'Showing')
+        ->latest()
+        ->take(10)
+        ->get();
 
-        return view('customer.home', compact('films'));
-    }
+    $upcomingFilms = Film::where('status', 'Upcoming')
+        ->latest()
+        ->take(10)
+        ->get();
+
+    return view('customer.home', compact(
+        'showingFilms',
+        'upcomingFilms'
+    ));
+}
 }

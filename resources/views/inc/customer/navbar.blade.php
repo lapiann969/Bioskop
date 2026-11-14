@@ -22,14 +22,14 @@
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}"
    href="{{ route('home') }}">
-    Home
+    Beranda
 </a>
                 </li>
 
                 <li class="nav-item">
                    <a class="nav-link {{ request()->routeIs('films.*') ? 'active' : '' }}"
    href="{{ route('films.index') }}">
-    Daftar Film
+    Film
 </a>
                 </li>
 

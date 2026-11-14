@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Film extends Model
 {
-    protected $fillable = [
-        'tmdb_id',
-        'title',
-        'description',
-        'duration',
-        'poster_url',
-        'status',
-    ];
+    
+protected $fillable = [
+    'tmdb_id',
+    'title',
+    'description',
+    'duration',
+    'poster_url',
+    'status',
+];
+
 
     public function schedules(): HasMany
     {
