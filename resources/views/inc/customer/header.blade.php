@@ -1,6 +1,31 @@
-
 @php
-    $featuredFilm = $showingFilms->first();
+    // Pilih film yang memiliki trailer terlebih dahulu.
+    $featuredFilm = $showingFilms->first(fn($film) => filled($film->trailer_url)) ?? $showingFilms->first();
+
+    // Ambil ID video YouTube.
+    $youtubeId = null;
+
+    if ($featuredFilm && $featuredFilm->trailer_url) {
+        $url = $featuredFilm->trailer_url;
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+
+        if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com'])) {
+            parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
+
+            if (!empty($query['v'])) {
+                $youtubeId = $query['v'];
+            } elseif (preg_match('~^/(embed|shorts)/([a-zA-Z0-9_-]+)~', $path, $matches)) {
+                $youtubeId = $matches[2];
+            }
+        } elseif ($host === 'youtu.be') {
+            $youtubeId = trim($path, '/');
+        }
+
+        if (!is_string($youtubeId) || !preg_match('/^[a-zA-Z0-9_-]{11}$/', $youtubeId)) {
+            $youtubeId = null;
+        }
+    }
 @endphp
 
 <style>
@@ -22,17 +47,13 @@
         position: absolute;
         inset: 0;
         background:
-            linear-gradient(
-                90deg,
+            linear-gradient(90deg,
                 rgba(0, 0, 0, .96) 0%,
                 rgba(0, 0, 0, .80) 40%,
-                rgba(0, 0, 0, .35) 100%
-            ),
-            linear-gradient(
-                0deg,
+                rgba(0, 0, 0, .35) 100%),
+            linear-gradient(0deg,
                 #080808 0%,
-                transparent 50%
-            );
+                transparent 50%);
         z-index: 1;
     }
 
@@ -117,10 +138,10 @@
         width: 245px;
         height: 350px;
         object-fit: cover;
-        border: 4px solid rgba(255,255,255,.8);
+        border: 4px solid rgba(255, 255, 255, .8);
         border-radius: 14px;
         transform: rotate(3deg);
-        box-shadow: 0 15px 45px rgba(0,0,0,.7);
+        box-shadow: 0 15px 45px rgba(0, 0, 0, .7);
         transition: .3s;
     }
 
@@ -161,9 +182,7 @@
 </style>
 
 <section class="hero-banner"
-    @if($featuredFilm && $featuredFilm->poster_url)
-        style="background-image: url('{{ $featuredFilm->poster_url }}');"
-    @endif>
+    @if ($featuredFilm && $featuredFilm->poster_url) style="background-image: url('{{ $featuredFilm->poster_url }}');" @endif>
 
     <div class="container hero-content">
 
@@ -183,11 +202,8 @@
 
                 <!-- SINOPSIS ASLI FILM -->
                 <p class="hero-description">
-                    @if($featuredFilm && !empty($featuredFilm->description))
-                        {{ \Illuminate\Support\Str::limit(
-                            $featuredFilm->description,
-                            250
-                        ) }}
+                    @if ($featuredFilm && !empty($featuredFilm->description))
+                        {{ \Illuminate\Support\Str::limit($featuredFilm->description, 250) }}
                     @else
                         Sinopsis film belum tersedia.
                     @endif
@@ -196,18 +212,22 @@
                 <!-- TOMBOL -->
                 <div class="d-flex flex-wrap gap-3">
 
-                    @if($featuredFilm)
+                    @if ($featuredFilm)
                         <a href="{{ route('schedules.index', ['film_id' => $featuredFilm->id]) }}"
                             class="btn hero-btn-primary">
                             PESAN SEKARANG
                         </a>
                     @endif
 
-                    <a href="{{ route('films.index') }}"
-                        class="btn hero-btn-secondary">
-                        LIHAT SEMUA FILM
-                    </a>
+                    @if ($youtubeId)
+                        <button type="button" class="btn hero-btn-secondary" data-bs-toggle="modal"
+                            data-bs-target="#heroTrailerModal">
+                            <i class="fas fa-play me-2"></i>
+                            LIHAT TRAILER
+                        </button>
+                    @endif
 
+                   
                 </div>
 
                 <div class="hero-brand">
@@ -219,12 +239,8 @@
             <!-- POSTER FILM -->
             <div class="col-md-5 text-center">
 
-                @if($featuredFilm && $featuredFilm->poster_url)
-
-                    <img src="{{ $featuredFilm->poster_url }}"
-                        alt="{{ $featuredFilm->title }}"
-                        class="hero-poster">
-
+                @if ($featuredFilm && $featuredFilm->poster_url)
+                    <img src="{{ $featuredFilm->poster_url }}" alt="{{ $featuredFilm->title }}" class="hero-poster">
                 @endif
 
             </div>
@@ -234,3 +250,61 @@
     </div>
 
 </section>
+
+@if($youtubeId)
+    <div class="modal fade" id="heroTrailerModal"
+        tabindex="-1"
+        aria-labelledby="heroTrailerTitle"
+        aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-dark text-white">
+
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="heroTrailerTitle">
+                        Trailer {{ $featuredFilm->title }}
+                    </h5>
+
+                    <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                    </button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="ratio ratio-16x9">
+                        <iframe
+                            id="heroTrailerFrame"
+                            data-src="https://www.youtube-nocookie.com/embed/{{ $youtubeId }}?autoplay=1&rel=0"
+                            src=""
+                            title="Trailer {{ $featuredFilm->title }}"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+@endif
+
+@if($youtubeId)
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('heroTrailerModal');
+            const iframe = document.getElementById('heroTrailerFrame');
+
+            if (modal && iframe) {
+                modal.addEventListener('show.bs.modal', function () {
+                    iframe.src = iframe.dataset.src;
+                });
+
+                modal.addEventListener('hidden.bs.modal', function () {
+                    iframe.src = '';
+                });
+            }
+        });
+    </script>
+@endif  

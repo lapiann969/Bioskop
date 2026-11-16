@@ -22,7 +22,7 @@ class AuthController extends Controller
         ]);
 
         // Cek kecocokan email dan password
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
             // Arahkan berdasarkan role

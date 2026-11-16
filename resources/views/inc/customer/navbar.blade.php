@@ -1,4 +1,3 @@
-
 <style>
     .main-navbar {
         position: absolute;
@@ -66,6 +65,28 @@
         color: #aaa;
     }
 
+    /* Menghilangkan background putih/biru pada input */
+    .navbar-search,
+    .navbar-search:focus {
+        background-color: transparent !important;
+        color: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* Mengatasi warna autofill Google Chrome */
+    .navbar-search:-webkit-autofill,
+    .navbar-search:-webkit-autofill:hover,
+    .navbar-search:-webkit-autofill:focus,
+    .navbar-search:-webkit-autofill:active {
+        -webkit-text-fill-color: #fff !important;
+        -webkit-box-shadow: 0 0 0 1000px #1e1e1e inset !important;
+        box-shadow: 0 0 0 1000px #1e1e1e inset !important;
+        transition: background-color 9999s ease-in-out 0s;
+        border: none !important;
+    }
+
     .navbar-search-submit {
         color: #ffc629;
         font-size: 18px;
@@ -121,10 +142,7 @@
             TIX <span>Bioskop</span>
         </a>
 
-        <button class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#customerNavbar">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#customerNavbar">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -133,15 +151,13 @@
             <ul class="navbar-nav ms-lg-5 me-auto">
 
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->is('/') ? 'active' : '' }}"
-                        href="{{ url('/') }}">
+                    <a class="nav-link {{ request()->is('/') ? 'active' : '' }}" href="{{ url('/') }}">
                         Beranda
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->is('films*') ? 'active' : '' }}"
-                        href="{{ route('films.index') }}">
+                    <a class="nav-link {{ request()->is('films*') ? 'active' : '' }}" href="{{ route('films.index') }}">
                         Film
                     </a>
                 </li>
@@ -165,14 +181,10 @@
 
                         <i class="bi bi-search navbar-search-icon"></i>
 
-                        <input type="search"
-                            name="search"
-                            class="form-control navbar-search"
-                            placeholder="Cari judul film favoritmu..."
-                            value="{{ request('search') }}">
+                        <input type="search" name="search" class="form-control navbar-search"
+                            placeholder="Cari judul film favoritmu..." value="{{ request('search') }}">
 
-                        <button type="submit"
-                            class="btn p-0 border-0 navbar-search-submit">
+                        <button type="submit" class="btn p-0 border-0 navbar-search-submit">
                             <i class="bi bi-arrow-right-circle"></i>
                         </button>
 
@@ -185,14 +197,10 @@
                     <a href="{{ route('login') }}" class="btn btn-login">
                         Masuk
                     </a>
-
                 @else
-
                     <div class="dropdown">
 
-                        <button class="btn btn-login dropdown-toggle"
-                            type="button"
-                            data-bs-toggle="dropdown">
+                        <button class="btn btn-login dropdown-toggle" type="button" data-bs-toggle="dropdown">
 
                             Halo, {{ Auth::user()->name }}
 
@@ -206,13 +214,14 @@
                                 </span>
                             </li>
 
-                            <li><hr class="dropdown-divider border-secondary"></li>
+                            <li>
+                                <hr class="dropdown-divider border-secondary">
+                            </li>
 
                             <li>
                                 <form action="{{ route('logout') }}" method="POST">
                                     @csrf
-                                    <button type="submit"
-                                        class="dropdown-item text-danger">
+                                    <button type="submit" class="dropdown-item text-danger">
                                         <i class="bi bi-box-arrow-right me-2"></i>
                                         Logout
                                     </button>
