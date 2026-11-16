@@ -3,23 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Schedule;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Http\Client\ConnectionException;
 
 class BookingController extends Controller
 {
+    // Menampilkan daftar booking milik user
     public function index()
     {
         $bookings = Booking::with(['schedule.film', 'payment'])
-            ->where('user_id', auth()->id())
+            ->where('user_id', Auth::id())
             ->latest()
             ->get();
 
         return view('bookings.index', compact('bookings'));
     }
 
+    // Menampilkan detail booking
     public function show(Booking $booking)
     {
         abort_unless(
-            $booking->user_id === auth()->id(),
+            $booking->user_id === Auth::id(),
             403
         );
 
@@ -31,5 +40,260 @@ class BookingController extends Controller
         ]);
 
         return view('bookings.show', compact('booking'));
+    }
+
+    // Membuat booking dan invoice Xendit
+    public function store(Request $request)
+    {
+        $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'selected_seats' => 'required|array|min:1',
+            'selected_seats.*' => 'required|string|distinct',
+        ], [
+            'selected_seats.required' =>
+                'Pilih minimal 1 kursi terlebih dahulu!',
+            'selected_seats.min' =>
+                'Pilih minimal 1 kursi terlebih dahulu!',
+        ]);
+
+        // Ambil API Key dari config
+        $secretKey = config('services.xendit.secret_key');
+
+        if (empty($secretKey)) {
+            Log::error('Xendit Secret API Key belum dikonfigurasi.');
+
+            return back()->with(
+                'error',
+                'Konfigurasi pembayaran belum tersedia. Hubungi administrator.'
+            );
+        }
+
+        $schedule = Schedule::with('film')
+            ->findOrFail($request->schedule_id);
+
+        $selectedSeats = $request->selected_seats;
+
+        // Cek kursi yang sudah dipesan
+        $existingBookings = Booking::where(
+            'schedule_id',
+            $schedule->id
+        )
+            ->whereIn('status', ['Pending', 'Paid'])
+            ->get(['seats']);
+
+        $alreadyBooked = $existingBookings->flatMap(
+            function ($booking) {
+                $seats = $booking->seats;
+
+                if (is_string($seats)) {
+                    $seats = json_decode($seats, true) ?? [];
+                }
+
+                return is_array($seats) ? $seats : [];
+            }
+        )->toArray();
+
+        // Pastikan kursi belum dipesan
+        if (count(array_intersect(
+            $selectedSeats,
+            $alreadyBooked
+        )) > 0) {
+            return back()->with(
+                'error',
+                'Maaf, salah satu kursi yang kamu pilih sudah dipesan orang lain.'
+            );
+        }
+
+        // Hitung total pembayaran
+        $totalTickets = count($selectedSeats);
+
+        $totalPrice = $totalTickets * ($schedule->price ?? 35000);
+
+        $bookingCode = 'BKG-' . strtoupper(Str::random(6));
+
+        // Buat invoice Xendit
+        try {
+            $response = Http::withBasicAuth(
+                $secretKey,
+                ''
+            )
+                ->acceptJson()
+                ->asJson()
+                ->timeout(30)
+                ->post('https://api.xendit.co/v2/invoices', [
+
+                    'external_id' => $bookingCode,
+
+                    'amount' => (int) $totalPrice,
+
+                    'payer_email' => Auth::user()->email
+                        ?? 'customer@tixbioskop.test',
+
+                    'description' =>
+                        'Tiket ' . $schedule->film->title .
+                        ' - Kursi: ' . implode(', ', $selectedSeats),
+
+                    'currency' => 'IDR',
+
+                    'success_redirect_url' => route(
+                        'checkout.success',
+                        ['code' => $bookingCode]
+                    ),
+
+                    'failure_redirect_url' => route(
+                        'checkout.show',
+                        ['code' => $bookingCode]
+                    ),
+                ]);
+
+        } catch (ConnectionException $e) {
+
+            Log::error('Koneksi ke Xendit gagal: ' . $e->getMessage());
+
+            return back()->with(
+                'error',
+                'Tidak dapat terhubung ke Xendit. Silakan coba kembali.'
+            );
+        }
+
+        // Periksa respons Xendit
+        if (!$response->successful()) {
+
+            Log::error('Gagal membuat invoice Xendit', [
+                'status' => $response->status(),
+                'response' => $response->json(),
+            ]);
+
+            return back()->with(
+                'error',
+                'Gagal membuat tagihan pembayaran. Silakan coba kembali.'
+            );
+        }
+
+        $invoice = $response->json();
+
+        if (empty($invoice['invoice_url'])) {
+            Log::error('Respons Xendit tidak memiliki invoice_url.', [
+                'response' => $invoice,
+            ]);
+
+            return back()->with(
+                'error',
+                'Invoice berhasil diproses tetapi URL pembayaran tidak ditemukan.'
+            );
+        }
+
+        // Simpan booking ke database
+        $booking = Booking::create([
+            'booking_code' => $bookingCode,
+            'user_id' => Auth::id(),
+            'schedule_id' => $schedule->id,
+            'seats' => $selectedSeats,
+            'total_tickets' => $totalTickets,
+            'total_price' => $totalPrice,
+            'status' => 'Pending',
+            'xendit_invoice_url' => $invoice['invoice_url'],
+        ]);
+
+        // Arahkan user ke halaman checkout
+        return redirect()->route(
+            'checkout.show',
+            $booking->booking_code
+        );
+    }
+
+    // Menampilkan halaman checkout
+    public function checkout($code)
+    {
+        $booking = Booking::with([
+            'schedule.film',
+            'schedule.studio',
+        ])
+            ->where('booking_code', $code)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        return view(
+            'customer.checkout.show',
+            compact('booking')
+        );
+    }
+
+    // Redirect setelah pelanggan kembali dari Xendit
+    public function success($code)
+    {
+        $booking = Booking::where('booking_code', $code)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        // Jangan mengubah status menjadi Paid di sini.
+        // Status Paid hanya boleh ditetapkan melalui webhook Xendit.
+
+        $message = $booking->status === 'Paid'
+            ? 'Pembayaran berhasil! E-Ticket kamu sudah aktif.'
+            : 'Terima kasih! Pembayaran sedang menunggu konfirmasi dari Xendit.';
+
+        return redirect()
+            ->route('checkout.show', $booking->booking_code)
+            ->with('success', $message);
+    }
+
+    // Menerima notifikasi pembayaran dari Xendit
+    public function webhook(Request $request)
+    {
+        $callbackToken = config('services.xendit.callback_token');
+
+        $receivedToken = $request->header('x-callback-token');
+
+        // Verifikasi token webhook
+        if (
+            empty($callbackToken) ||
+            empty($receivedToken) ||
+            !hash_equals($callbackToken, $receivedToken)
+        ) {
+            Log::warning('Webhook Xendit: token tidak valid.');
+
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $externalId = $request->input('external_id');
+        $paymentStatus = strtoupper(
+            $request->input('status', '')
+        );
+
+        if (!$externalId) {
+            return response()->json([
+                'message' => 'External ID tidak ditemukan.',
+            ], 400);
+        }
+
+        $booking = Booking::where(
+            'booking_code',
+            $externalId
+        )->first();
+
+        if (!$booking) {
+            return response()->json([
+                'message' => 'Booking tidak ditemukan.',
+            ], 404);
+        }
+
+        // Hanya konfirmasi pembayaran yang berhasil
+        if ($paymentStatus === 'PAID') {
+
+            $booking->update([
+                'status' => 'Paid',
+            ]);
+
+            Log::info('Pembayaran booking berhasil.', [
+                'booking_code' => $booking->booking_code,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Webhook berhasil diterima.',
+        ], 200);
     }
 }

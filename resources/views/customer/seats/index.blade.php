@@ -13,6 +13,7 @@
             line-height: 40px; text-align: center; 
             background-color: #444; color: white; 
             border-radius: 5px; cursor: pointer; transition: 0.3s;
+            user-select: none;
         }
         .seat-checkbox:checked + .seat-label {
             background-color: #ffc107; /* Warna kuning warning Bootstrap */
@@ -34,6 +35,21 @@
 </nav>
 
 <div class="container my-5">
+
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger mb-3">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="row">
         <!-- Bagian Kiri: Denah Kursi -->
         <div class="col-lg-8 mb-4">
@@ -45,19 +61,27 @@
                     LAYAR BIOSKOP
                 </div>
 
-                <!-- Form yang akan mengirim kursi ke halaman Checkout -->
-                <form action="{{ route('checkout.show', ['booking' => 'dummy-id']) }}" method="GET" id="seatForm">
+                <!-- Form yang akan mengirim kursi ke BookingController@store -->
+                <form action="{{ route('bookings.store') }}" method="POST" id="seatForm">
+                    @csrf
+                    <input type="hidden" name="schedule_id" value="{{ $schedule->id }}">
+
                     <div class="d-flex flex-wrap justify-content-center gap-2">
                         @forelse($seats as $seat)
                             @php 
-                                // Cek apakah kursi ini sudah dipesan
                                 $isBooked = in_array($seat->id, $bookedSeats); 
                             @endphp
                             
                             <div>
-                                <input type="checkbox" name="selected_seats[]" value="{{ $seat->id }}" id="seat-{{ $seat->id }}" class="seat-checkbox" {{ $isBooked ? 'disabled' : '' }}>
+                                <input type="checkbox" 
+                                       name="selected_seats[]" 
+                                       value="{{ $seat->id }}" 
+                                       id="seat-{{ $seat->id }}" 
+                                       class="seat-checkbox" 
+                                       data-seat-name="{{ $seat->seat_number }}"
+                                       {{ $isBooked ? 'disabled' : '' }}>
                                 <label for="seat-{{ $seat->id }}" class="seat-label shadow-sm" title="Kursi {{ $seat->seat_number }}">
-                                    {{ $seat->seat_number }} <!-- Asumsi kolom nama kursinya 'seat_number' atau 'name' -->
+                                    {{ $seat->seat_number }}
                                 </label>
                             </div>
                         @empty
@@ -84,8 +108,13 @@
                     <p class="mb-1"><strong>Tanggal:</strong> {{ $schedule->show_date ?? $schedule->date ?? '-' }}</p>
                     <p class="mb-1"><strong>Jam:</strong> {{ $schedule->start_time ?? $schedule->show_time ?? '-' }}</p>
                     <p class="mb-3"><strong>Harga:</strong> Rp {{ number_format($schedule->price ?? 35000, 0, ',', '.') }} / tiket</p>
+
+                    <hr class="border-secondary">
+
+                    <p class="mb-1"><strong>Kursi Dipilih:</strong> <span id="selectedSeatsText" class="text-warning fw-bold">-</span></p>
+                    <p class="mb-4 fs-5"><strong>Total:</strong> <span id="totalPriceText" class="text-warning fw-bold">Rp 0</span></p>
                     
-                    <button type="button" onclick="document.getElementById('seatForm').submit();" class="btn btn-warning w-100 fw-bold fs-5">
+                    <button type="button" onclick="submitBooking()" class="btn btn-warning w-100 fw-bold fs-5">
                         Lanjut Checkout →
                     </button>
                 </div>
@@ -93,6 +122,42 @@
         </div>
     </div>
 </div>
+
+<script>
+    const checkboxes = document.querySelectorAll('.seat-checkbox:not(:disabled)');
+    const selectedSeatsText = document.getElementById('selectedSeatsText');
+    const totalPriceText = document.getElementById('totalPriceText');
+    const ticketPrice = {{ $schedule->price ?? 35000 }};
+
+    function updateSummary() {
+        const selected = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                selected.push(cb.getAttribute('data-seat-name'));
+            }
+        });
+
+        if (selected.length > 0) {
+            selectedSeatsText.textContent = selected.join(', ');
+            const total = selected.length * ticketPrice;
+            totalPriceText.textContent = 'Rp ' + total.toLocaleString('id-ID');
+        } else {
+            selectedSeatsText.textContent = '-';
+            totalPriceText.textContent = 'Rp 0';
+        }
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateSummary));
+
+    function submitBooking() {
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            alert('Silakan pilih minimal 1 kursi terlebih dahulu!');
+            return;
+        }
+        document.getElementById('seatForm').submit();
+    }
+</script>
 
 </body>
 </html>

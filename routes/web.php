@@ -39,18 +39,15 @@ Route::get('/', [HomeController::class, 'index'])
 Route::get('/films', [FilmController::class, 'index'])
     ->name('films.index');
 
-// Home lama
-Route::get('/home', function () {
-    return redirect()->route('home');
-})->name('customer.dashboard');
-
-// detail film
+// Detail Film
 Route::get('/films/{film}', [FilmController::class, 'show'])
     ->name('films.show');
 
+// Jadwal Tayang
 Route::get('/schedules', [ScheduleController::class, 'index'])
     ->name('schedules.index');
 
+// Sinkronisasi TMDB
 Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
     ->name('films.fetch-tmdb');
 
@@ -81,15 +78,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::middleware('auth')->group(function () {
 
     Route::get('/home', [HomeController::class, 'index'])
-    ->middleware('auth')
-    ->name('customer.dashboard');
+        ->name('customer.dashboard');
 
     Route::get('/beranda', [HomeController::class, 'index'])
-    ->middleware('auth')
-    ->name('customer.beranda');
-
-    Route::get('/schedules', [ScheduleController::class, 'index'])
-        ->name('schedules.index');
+        ->name('customer.beranda');
 
     Route::get('/schedules/{schedule}', [ScheduleController::class, 'show'])
         ->name('schedules.show');
@@ -97,14 +89,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/schedules/{schedule}/seats', [SeatController::class, 'index'])
         ->name('seats.index');
 
+    // Booking & Checkout Xendit
     Route::get('/bookings', [BookingController::class, 'index'])
         ->name('bookings.index');
+
+    Route::post('/bookings', [BookingController::class, 'store'])
+        ->name('bookings.store');
 
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])
         ->name('bookings.show');
 
-    Route::get('/bookings/{booking}/checkout', [CheckoutController::class, 'show'])
+    Route::get('/checkout/{code}', [BookingController::class, 'checkout'])
         ->name('checkout.show');
+
+    Route::get('/checkout/{code}/success', [BookingController::class, 'success'])
+        ->name('checkout.success');
 
     Route::get('/bookings/{booking}/payment', [PaymentController::class, 'show'])
         ->name('payments.show');

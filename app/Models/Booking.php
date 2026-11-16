@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -12,14 +13,17 @@ class Booking extends Model
         'booking_code',
         'user_id',
         'schedule_id',
+        'seats',
         'total_tickets',
         'total_price',
         'status',
+        'xendit_invoice_url',
     ];
 
     protected function casts(): array
     {
         return [
+            'seats'       => 'array',
             'total_price' => 'decimal:2',
         ];
     }
