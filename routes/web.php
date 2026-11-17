@@ -54,6 +54,9 @@ Route::get('/fetch-tmdb', [FilmController::class, 'fetchFromTMDB'])
 Route::get('/fetch-upcoming', [FilmController::class, 'fetchUpcomingFromTMDB'])
     ->name('films.fetch-upcoming');
 
+Route::post('/xendit/webhook', [BookingController::class, 'webhook'])
+    ->name('xendit.webhook');
+
 // ==========================================
 // 2. AUTHENTICATION ROUTES
 // ==========================================

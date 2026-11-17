@@ -3,18 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use Illuminate\Support\Facades\Auth;
 
 class PaymentController extends Controller
 {
     public function show(Booking $booking)
     {
         abort_unless(
-            $booking->user_id === auth()->id(),
+            $booking->user_id === Auth::id(),
             403
         );
 
-        $booking->load('payment', 'schedule.film');
-
-        return view('payments.show', compact('booking'));
+        return redirect()->route(
+            'checkout.show',
+            $booking->booking_code
+        );
     }
 }

@@ -1,76 +1,102 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout - {{ $booking->booking_code }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-dark text-white">
+@extends('layouts.customer')
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-black shadow-sm">
-    <div class="container">
-        <a class="navbar-brand text-warning fw-bold fs-4" href="{{ route('customer.dashboard') }}">🎥 TIX Bioskop</a>
-    </div>
-</nav>
+@push('styles')
+<style>
+    .checkout-container {
+        max-width: 600px;
+        padding-top: 120px;
+        padding-bottom: 40px;
+    }
+</style>
+@endpush
 
-<div class="container my-5" style="max-width: 600px;">
+@section('content')
+<div class="container checkout-container">
+
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
     @endif
 
     <div class="card bg-black text-white border-secondary shadow">
         <div class="card-header border-secondary d-flex justify-content-between align-items-center py-3">
-            <span class="fw-bold text-warning fs-5">Detail Pemesanan</span>
+            <span class="fw-bold text-warning fs-5">
+                Detail Pemesanan
+            </span>
+
             @if($booking->status === 'Paid')
                 <span class="badge bg-success fs-6">LUNAS (E-TICKET)</span>
             @else
                 <span class="badge bg-warning text-dark fs-6">MENUNGGU PEMBAYARAN</span>
             @endif
         </div>
+
         <div class="card-body p-4">
             <small class="text-secondary d-block">Kode Booking</small>
-            <h4 class="fw-bold text-warning mb-3">{{ $booking->booking_code }}</h4>
+            <h4 class="fw-bold text-warning mb-3">
+                {{ $booking->booking_code }}
+            </h4>
 
             <hr class="border-secondary">
 
             <div class="d-flex justify-content-between mb-2">
                 <span class="text-secondary">Film</span>
-                <span class="fw-bold text-end">{{ $booking->schedule->film->title }}</span>
+                <span class="fw-bold text-end">
+                    {{ $booking->schedule->film->title }}
+                </span>
             </div>
+
             <div class="d-flex justify-content-between mb-2">
                 <span class="text-secondary">Studio</span>
                 <span>{{ $booking->schedule->studio->name }}</span>
             </div>
+
             <div class="d-flex justify-content-between mb-2">
                 <span class="text-secondary">Jadwal</span>
-                <span>{{ \Carbon\Carbon::parse($booking->schedule->show_time)->format('d M Y, H:i') }} WIB</span>
+                <span>
+                    {{ \Carbon\Carbon::parse($booking->schedule->show_time)->format('d M Y, H:i') }} WIB
+                </span>
             </div>
+
             <div class="d-flex justify-content-between mb-2">
-                <span class="text-secondary">Kursi ({{ $booking->total_tickets }} Tiket)</span>
-                <span class="fw-bold text-warning">{{ implode(', ', $booking->seats ?? []) }}</span>
+                <span class="text-secondary">
+                    Kursi ({{ $booking->total_tickets }} Tiket)
+                </span>
+                <span class="fw-bold text-warning">
+                    {{ implode(', ', $booking->seats ?? []) }}
+                </span>
             </div>
 
             <hr class="border-secondary">
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <span class="fs-5">Total Bayar</span>
-                <span class="fs-4 fw-bold text-warning">Rp {{ number_format($booking->total_price, 0, ',', '.') }}</span>
+                <span class="fs-4 fw-bold text-warning">
+                    Rp {{ number_format($booking->total_price, 0, ',', '.') }}
+                </span>
             </div>
 
             @if($booking->status === 'Pending' && $booking->xendit_invoice_url)
-                <a href="{{ $booking->xendit_invoice_url }}" class="btn btn-warning w-100 fw-bold fs-5 py-2">
-                    Bayar Sekarang via Xendit →
+                <a href="{{ $booking->xendit_invoice_url }}"
+                   class="btn btn-warning w-100 fw-bold fs-5 py-2">
+                    Bayar Sekarang via Xendit
+                    <i class="bi bi-arrow-right"></i>
                 </a>
+
             @elseif($booking->status === 'Paid')
                 <div class="alert alert-dark border-success text-center mb-3">
-                    Tunjukkan kode <strong>{{ $booking->booking_code }}</strong> di pintu masuk studio.
+                    Tunjukkan kode
+                    <strong>{{ $booking->booking_code }}</strong>
+                    di pintu masuk studio.
                 </div>
-                <a href="{{ route('customer.dashboard') }}" class="btn btn-outline-light w-100">Kembali ke Beranda</a>
+
+                <a href="{{ route('customer.dashboard') }}"
+                   class="btn btn-outline-light w-100">
+                    Kembali ke Beranda
+                </a>
             @endif
         </div>
     </div>
 </div>
-
-</body>
-</html>
+@endsection

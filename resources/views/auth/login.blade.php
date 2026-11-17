@@ -84,32 +84,33 @@
         </p>
 
         <div class="text-center mt-4">
-            <a href="{{ url('/') }}" class="auth-muted text-decoration-none">
+            <a href="{{ route('home') }}" class="auth-muted text-decoration-none">
                 &larr; Kembali ke Beranda
             </a>
         </div>
+    </div>
 
     </div>
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const alertMessage = document.getElementById('successAlert');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const alertMessage = document.getElementById('successAlert');
 
-        if (alertMessage) {
-            setTimeout(function () {
-                alertMessage.style.transition = 'opacity 0.5s ease';
-                alertMessage.style.opacity = '0';
+            if (alertMessage) {
+                setTimeout(function() {
+                    alertMessage.style.transition = 'opacity 0.5s ease';
+                    alertMessage.style.opacity = '0';
 
-                setTimeout(function () {
-                    alertMessage.remove();
-                }, 500);
+                    setTimeout(function() {
+                        alertMessage.remove();
+                    }, 500);
 
-            }, 2000);
-        }
-    });
-</script>
+                }, 2000);
+            }
+        });
+    </script>
 @endpush
 
 @push('scripts')

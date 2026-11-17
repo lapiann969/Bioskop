@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Schedule;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -13,7 +14,10 @@ use Illuminate\Http\Client\ConnectionException;
 
 class BookingController extends Controller
 {
-    // Menampilkan daftar booking milik user
+    // ==========================================
+    // 1. MENAMPILKAN DAFTAR BOOKING
+    // ==========================================
+
     public function index()
     {
         $bookings = Booking::with(['schedule.film', 'payment'])
@@ -24,7 +28,10 @@ class BookingController extends Controller
         return view('bookings.index', compact('bookings'));
     }
 
-    // Menampilkan detail booking
+    // ==========================================
+    // 2. MENAMPILKAN DETAIL BOOKING
+    // ==========================================
+
     public function show(Booking $booking)
     {
         abort_unless(
@@ -42,7 +49,10 @@ class BookingController extends Controller
         return view('bookings.show', compact('booking'));
     }
 
-    // Membuat booking dan invoice Xendit
+    // ==========================================
+    // 3. MEMBUAT BOOKING DAN INVOICE XENDIT
+    // ==========================================
+
     public function store(Request $request)
     {
         $request->validate([
@@ -52,11 +62,12 @@ class BookingController extends Controller
         ], [
             'selected_seats.required' =>
                 'Pilih minimal 1 kursi terlebih dahulu!',
+
             'selected_seats.min' =>
                 'Pilih minimal 1 kursi terlebih dahulu!',
         ]);
 
-        // Ambil API Key dari config
+        // Ambil API Key Xendit
         $secretKey = config('services.xendit.secret_key');
 
         if (empty($secretKey)) {
@@ -68,6 +79,7 @@ class BookingController extends Controller
             );
         }
 
+        // Ambil jadwal dan film
         $schedule = Schedule::with('film')
             ->findOrFail($request->schedule_id);
 
@@ -94,10 +106,12 @@ class BookingController extends Controller
         )->toArray();
 
         // Pastikan kursi belum dipesan
-        if (count(array_intersect(
-            $selectedSeats,
-            $alreadyBooked
-        )) > 0) {
+        if (
+            count(array_intersect(
+                $selectedSeats,
+                $alreadyBooked
+            )) > 0
+        ) {
             return back()->with(
                 'error',
                 'Maaf, salah satu kursi yang kamu pilih sudah dipesan orang lain.'
@@ -109,9 +123,13 @@ class BookingController extends Controller
 
         $totalPrice = $totalTickets * ($schedule->price ?? 35000);
 
+        // Buat kode booking
         $bookingCode = 'BKG-' . strtoupper(Str::random(6));
 
-        // Buat invoice Xendit
+        // ==========================================
+        // REQUEST INVOICE XENDIT
+        // ==========================================
+
         try {
             $response = Http::withBasicAuth(
                 $secretKey,
@@ -148,7 +166,9 @@ class BookingController extends Controller
 
         } catch (ConnectionException $e) {
 
-            Log::error('Koneksi ke Xendit gagal: ' . $e->getMessage());
+            Log::error(
+                'Koneksi ke Xendit gagal: ' . $e->getMessage()
+            );
 
             return back()->with(
                 'error',
@@ -172,10 +192,13 @@ class BookingController extends Controller
 
         $invoice = $response->json();
 
+        // Pastikan URL pembayaran tersedia
         if (empty($invoice['invoice_url'])) {
-            Log::error('Respons Xendit tidak memiliki invoice_url.', [
-                'response' => $invoice,
-            ]);
+
+            Log::error(
+                'Respons Xendit tidak memiliki invoice_url.',
+                ['response' => $invoice]
+            );
 
             return back()->with(
                 'error',
@@ -183,7 +206,10 @@ class BookingController extends Controller
             );
         }
 
-        // Simpan booking ke database
+        // ==========================================
+        // SIMPAN DATA BOOKING
+        // ==========================================
+
         $booking = Booking::create([
             'booking_code' => $bookingCode,
             'user_id' => Auth::id(),
@@ -195,6 +221,18 @@ class BookingController extends Controller
             'xendit_invoice_url' => $invoice['invoice_url'],
         ]);
 
+        // ==========================================
+        // SIMPAN DATA PAYMENT
+        // ==========================================
+
+        Payment::create([
+            'booking_id' => $booking->id,
+            'payment_method' => null,
+            'amount' => $totalPrice,
+            'status' => 'Pending',
+            'payment_url' => $invoice['invoice_url'],
+        ]);
+
         // Arahkan user ke halaman checkout
         return redirect()->route(
             'checkout.show',
@@ -202,7 +240,10 @@ class BookingController extends Controller
         );
     }
 
-    // Menampilkan halaman checkout
+    // ==========================================
+    // 4. MENAMPILKAN HALAMAN CHECKOUT
+    // ==========================================
+
     public function checkout($code)
     {
         $booking = Booking::with([
@@ -219,16 +260,17 @@ class BookingController extends Controller
         );
     }
 
-    // Redirect setelah pelanggan kembali dari Xendit
+    // ==========================================
+    // 5. REDIRECT SETELAH PEMBAYARAN
+    // ==========================================
+
     public function success($code)
     {
         $booking = Booking::where('booking_code', $code)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // Jangan mengubah status menjadi Paid di sini.
-        // Status Paid hanya boleh ditetapkan melalui webhook Xendit.
-
+        // Status Paid hanya ditetapkan melalui webhook Xendit
         $message = $booking->status === 'Paid'
             ? 'Pembayaran berhasil! E-Ticket kamu sudah aktif.'
             : 'Terima kasih! Pembayaran sedang menunggu konfirmasi dari Xendit.';
@@ -238,7 +280,10 @@ class BookingController extends Controller
             ->with('success', $message);
     }
 
-    // Menerima notifikasi pembayaran dari Xendit
+    // ==========================================
+    // 6. WEBHOOK XENDIT
+    // ==========================================
+
     public function webhook(Request $request)
     {
         $callbackToken = config('services.xendit.callback_token');
@@ -258,7 +303,9 @@ class BookingController extends Controller
             ], 401);
         }
 
+        // Ambil data dari Xendit
         $externalId = $request->input('external_id');
+
         $paymentStatus = strtoupper(
             $request->input('status', '')
         );
@@ -269,6 +316,7 @@ class BookingController extends Controller
             ], 400);
         }
 
+        // Cari booking berdasarkan kode booking
         $booking = Booking::where(
             'booking_code',
             $externalId
@@ -280,12 +328,22 @@ class BookingController extends Controller
             ], 404);
         }
 
-        // Hanya konfirmasi pembayaran yang berhasil
+        // ==========================================
+        // KONFIRMASI PEMBAYARAN BERHASIL
+        // ==========================================
+
         if ($paymentStatus === 'PAID') {
 
+            // Perbarui status booking
             $booking->update([
                 'status' => 'Paid',
             ]);
+
+            // Perbarui status payment
+            Payment::where('booking_id', $booking->id)
+                ->update([
+                    'status' => 'Success',
+                ]);
 
             Log::info('Pembayaran booking berhasil.', [
                 'booking_code' => $booking->booking_code,
@@ -293,7 +351,7 @@ class BookingController extends Controller
         }
 
         return response()->json([
-            'message' => 'Webhook berhasil diterima.',
+            'message' => 'Webhook berhasil diproses.',
         ], 200);
     }
 }

@@ -131,6 +131,23 @@
             margin: 12px 0;
         }
     }
+
+    .btn-register {
+        background: #ffc629;
+        color: #111;
+        border: 1px solid #ffc629;
+        border-radius: 8px;
+        padding: 9px 18px;
+        font-weight: 700;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .btn-register:hover {
+        background: #eab308;
+        border-color: #eab308;
+        color: #111;
+    }
 </style>
 
 <nav class="navbar navbar-expand-lg navbar-dark main-navbar">
@@ -148,7 +165,8 @@
 
         <div class="collapse navbar-collapse" id="customerNavbar">
 
-            <ul class="navbar-nav ms-lg-5 me-auto">
+
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('/') ? 'active' : '' }}" href="{{ url('/') }}">
@@ -194,9 +212,17 @@
 
                 @guest
 
-                    <a href="{{ route('login') }}" class="btn btn-login">
-                        Masuk
-                    </a>
+                    <div class="d-flex gap-2">
+
+                        <a href="{{ route('login') }}" class="btn btn-login">
+                            Masuk
+                        </a>
+
+                        <a href="{{ route('register') }}" class="btn btn-register">
+                            Daftar
+                        </a>
+
+                    </div>
                 @else
                     <div class="dropdown">
 
