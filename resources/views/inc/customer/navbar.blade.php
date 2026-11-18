@@ -4,7 +4,7 @@
         top: 0;
         left: 0;
         width: 100%;
-        z-index: 1000;
+        z-index: 1050;
         background: rgba(8, 8, 8, 0.55);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -102,7 +102,9 @@
         white-space: nowrap;
     }
 
-    .btn-login:hover {
+    .btn-login:hover,
+    .btn-login:focus,
+    .btn-login.show {
         background: #ffc629;
         color: #111;
     }
@@ -110,6 +112,7 @@
     .navbar-dropdown {
         background: #171717;
         border: 1px solid #333;
+        z-index: 1060;
     }
 
     .navbar-dropdown .dropdown-item {
@@ -164,7 +167,6 @@
         </button>
 
         <div class="collapse navbar-collapse" id="customerNavbar">
-
 
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
@@ -226,22 +228,27 @@
                 @else
                     <div class="dropdown">
 
-                        <button class="btn btn-login dropdown-toggle" type="button" data-bs-toggle="dropdown">
-
+                        <button id="userDropdownBtn" class="btn btn-login dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Halo, {{ Auth::user()->name }}
-
                         </button>
 
-                        <ul class="dropdown-menu dropdown-menu-end navbar-dropdown">
+                        <ul id="userDropdownMenu" class="dropdown-menu dropdown-menu-end navbar-dropdown" aria-labelledby="userDropdownBtn">
 
                             <li>
-                                <span class="dropdown-item-text text-white-50">
+                                <span class="dropdown-item-text text-white-50 small">
                                     {{ Auth::user()->email }}
                                 </span>
                             </li>
 
                             <li>
                                 <hr class="dropdown-divider border-secondary">
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="{{ route('history.index') }}">
+                                    <i class="bi bi-ticket-perforated me-2"></i>
+                                    Riwayat Pemesanan
+                                </a>
                             </li>
 
                             <li>
@@ -267,3 +274,13 @@
     </div>
 
 </nav>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof bootstrap === 'undefined') {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
+            document.body.appendChild(script);
+        }
+    });
+</script>

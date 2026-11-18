@@ -1,50 +1,54 @@
 @extends('layouts.admin')
 
+@section('title', 'Kelola Genre')
+@section('page-title', 'Kelola Data Genre')
+
 @section('content')
-<div class="container px-6 mx-auto grid">
-    <div class="flex justify-between items-center my-6">
-        <h2 class="text-2xl font-semibold text-gray-700">Daftar Genre Film</h2>
-        <a href="{{ route('admin.genres.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
-            + Tambah Genre
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Daftar Genre Film</h4>
+        <a href="{{ route('admin.genres.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tambah Genre
         </a>
     </div>
 
     @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <div class="w-full overflow-hidden rounded-lg shadow-xs border border-gray-200 bg-white">
-        <table class="w-full whitespace-no-wrap">
-            <thead>
-                <tr class="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
-                    <th class="px-4 py-3">No</th>
-                    <th class="px-4 py-3">Nama Genre</th>
-                    <th class="px-4 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y text-gray-700">
-                @forelse($genres as $genre)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-sm font-semibold">{{ $genre->name }}</td>
-                        <td class="px-4 py-3 text-sm flex space-x-2">
-                            <a href="{{ route('admin.genres.edit', $genre->id) }}" class="px-3 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600">Edit</a>
-                            <form action="{{ route('admin.genres.destroy', $genre->id) }}" method="POST" onsubmit="return confirm('Hapus genre ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Hapus</button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
                     <tr>
-                        <td colspan="3" class="px-4 py-3 text-center text-gray-500">Belum ada data genre.</td>
+                        <th class="py-3 px-4" width="70">No</th>
+                        <th class="py-3 px-4">Nama Genre</th>
+                        <th class="py-3 px-4 text-center" width="180">Aksi</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($genres as $genre)
+                        <tr>
+                            <td class="px-4">{{ $loop->iteration }}</td>
+                            <td class="px-4 fw-bold">{{ $genre->name }}</td>
+                            <td class="px-4 text-center">
+                                <a href="{{ route('admin.genres.edit', $genre->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                <form action="{{ route('admin.genres.destroy', $genre->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus genre ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">Belum ada data genre.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 @endsection

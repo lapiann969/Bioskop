@@ -1,57 +1,60 @@
 @extends('layouts.admin')
 
+@section('title', 'Kelola Kursi')
+@section('page-title', 'Kelola Data Kursi')
+
 @section('content')
-<div class="container px-6 mx-auto grid">
-    <div class="flex justify-between items-center my-6">
-        <h2 class="text-2xl font-semibold text-gray-700">Daftar Kursi Studio</h2>
-        <a href="{{ route('admin.seats.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
-            + Tambah Kursi
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Daftar Kursi Studio</h4>
+        <a href="{{ route('admin.seats.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tambah Kursi
         </a>
     </div>
 
     @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <div class="w-full overflow-hidden rounded-lg shadow-xs border border-gray-200 bg-white">
-        <table class="w-full whitespace-no-wrap">
-            <thead>
-                <tr class="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
-                    <th class="px-4 py-3">No</th>
-                    <th class="px-4 py-3">Studio</th>
-                    <th class="px-4 py-3">Kode Kursi (Baris & Nomor)</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y text-gray-700">
-                @forelse($seats as $seat)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-sm font-semibold">{{ $seat->studio->name ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm">{{ $seat->row }}{{ $seat->number }}</td>
-                        <td class="px-4 py-3 text-sm">
-                            <!-- Contoh status (jika ada kolom status aktif/rusak di database) -->
-                            <span class="px-2 py-1 text-xs font-bold leading-none text-green-100 bg-green-700 rounded-full">Aktif</span>
-                        </td>
-                        <td class="px-4 py-3 text-sm flex space-x-2">
-                            <a href="{{ route('admin.seats.edit', $seat->id) }}" class="px-3 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600">Edit</a>
-                            <form action="{{ route('admin.seats.destroy', $seat->id) }}" method="POST" onsubmit="return confirm('Hapus kursi ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Hapus</button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
                     <tr>
-                        <td colspan="5" class="px-4 py-3 text-center text-gray-500">Belum ada data kursi.</td>
+                        <th class="py-3 px-4" width="70">No</th>
+                        <th class="py-3 px-4">Studio</th>
+                        <th class="py-3 px-4">Kode Kursi (Baris & Nomor)</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-center" width="180">Aksi</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($seats as $seat)
+                        <tr>
+                            <td class="px-4">{{ $loop->iteration }}</td>
+                            <td class="px-4 fw-bold">{{ $seat->studio->name ?? '-' }}</td>
+                            <td class="px-4"><span class="badge bg-dark">{{ $seat->row }}{{ $seat->number }}</span></td>
+                            <td class="px-4">
+                                <span class="badge bg-success">Aktif</span>
+                            </td>
+                            <td class="px-4 text-center">
+                                <a href="{{ route('admin.seats.edit', $seat->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                <form action="{{ route('admin.seats.destroy', $seat->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus kursi ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">Belum ada data kursi.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 @endsection
