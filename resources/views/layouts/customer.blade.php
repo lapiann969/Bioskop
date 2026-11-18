@@ -50,6 +50,7 @@
         main {
             min-height: 60vh;
         }
+        
     </style>
 
     @stack('styles')

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Film;
+use App\Models\Genre;
 use Carbon\Carbon;
 
 class FilmController extends Controller
@@ -24,70 +25,69 @@ class FilmController extends Controller
      * Mengambil trailer YouTube dari TMDB.
      * Prioritas: trailer Indonesia, trailer resmi, lalu trailer lainnya.
      */
-   
-private function getMovieTrailer($tmdbId)
-{
-    if (!$tmdbId) {
-        return null;
-    }
 
-    return Cache::remember(
-        'tmdb_movie_trailer_' . $tmdbId,
-        21600,
-        function () use ($tmdbId) {
-
-            try {
-                // Coba bahasa Indonesia terlebih dahulu,
-                // kemudian bahasa Inggris.
-                foreach (['id-ID', 'en-US'] as $language) {
-
-                    $response = Http::timeout(20)->get(
-                        $this->getBaseUrl() . '/movie/' . $tmdbId . '/videos',
-                        [
-                            'api_key' => $this->getApiKey(),
-                            'language' => $language,
-                        ]
-                    );
-
-                    if (!$response->successful()) {
-                        continue;
-                    }
-
-                    $videos = collect(
-                        $response->json('results', [])
-                    )->filter(function ($video) {
-                        return ($video['site'] ?? '') === 'YouTube'
-                            && ($video['type'] ?? '') === 'Trailer'
-                            && !empty($video['key']);
-                    });
-
-                    if ($videos->isEmpty()) {
-                        continue;
-                    }
-
-                    // Prioritaskan trailer resmi.
-                    $trailer = $videos->first(function ($video) {
-                        return !empty($video['official']);
-                    });
-
-                    // Jika tidak ada trailer resmi,
-                    // gunakan trailer pertama.
-                    $trailer = $trailer ?: $videos->first();
-
-                    return 'https://www.youtube.com/watch?v='
-                        . $trailer['key'];
-                }
-
-                return null;
-
-            } catch (\Exception $e) {
-                report($e);
-
-                return null;
-            }
+    private function getMovieTrailer($tmdbId)
+    {
+        if (!$tmdbId) {
+            return null;
         }
-    );
-}
+
+        return Cache::remember(
+            'tmdb_movie_trailer_' . $tmdbId,
+            21600,
+            function () use ($tmdbId) {
+
+                try {
+                    // Coba bahasa Indonesia terlebih dahulu,
+                    // kemudian bahasa Inggris.
+                    foreach (['id-ID', 'en-US'] as $language) {
+
+                        $response = Http::timeout(20)->get(
+                            $this->getBaseUrl() . '/movie/' . $tmdbId . '/videos',
+                            [
+                                'api_key' => $this->getApiKey(),
+                                'language' => $language,
+                            ]
+                        );
+
+                        if (!$response->successful()) {
+                            continue;
+                        }
+
+                        $videos = collect(
+                            $response->json('results', [])
+                        )->filter(function ($video) {
+                            return ($video['site'] ?? '') === 'YouTube'
+                                && ($video['type'] ?? '') === 'Trailer'
+                                && !empty($video['key']);
+                        });
+
+                        if ($videos->isEmpty()) {
+                            continue;
+                        }
+
+                        // Prioritaskan trailer resmi.
+                        $trailer = $videos->first(function ($video) {
+                            return !empty($video['official']);
+                        });
+
+                        // Jika tidak ada trailer resmi,
+                        // gunakan trailer pertama.
+                        $trailer = $trailer ?: $videos->first();
+
+                        return 'https://www.youtube.com/watch?v='
+                            . $trailer['key'];
+                    }
+
+                    return null;
+                } catch (\Exception $e) {
+                    report($e);
+
+                    return null;
+                }
+            }
+        );
+    }
 
 
     /**
@@ -190,6 +190,64 @@ private function getMovieTrailer($tmdbId)
     }
 
     /**
+     * Mengambil dan menyimpan daftar genre dari TMDB.
+     */
+    private function syncGenresFromTMDB(): array
+    {
+        $response = Http::timeout(20)->get(
+            $this->getBaseUrl() . '/genre/movie/list',
+            [
+                'api_key' => $this->getApiKey(),
+                'language' => 'id-ID',
+            ]
+        );
+
+        // Jika TMDB gagal dihubungi, gunakan genre yang sudah tersimpan.
+        if (!$response->successful()) {
+            return Genre::whereNotNull('tmdb_id')
+                ->pluck('id', 'tmdb_id')
+                ->toArray();
+        }
+
+        $genreMap = [];
+
+        foreach ($response->json('genres', []) as $genre) {
+            $savedGenre = Genre::updateOrCreate(
+                ['tmdb_id' => $genre['id']],
+                ['name' => $genre['name']]
+            );
+
+            // Pasangkan ID TMDB dengan ID lokal database.
+            $genreMap[$genre['id']] = $savedGenre->id;
+        }
+
+        return $genreMap;
+    }
+
+    /**
+     * Menghubungkan genre TMDB dengan film.
+     */
+    private function syncFilmGenres(
+        Film $film,
+        array $tmdbGenreIds,
+        array $genreMap
+    ): void {
+        if (empty($tmdbGenreIds)) {
+            return;
+        }
+
+        $localGenreIds = collect($tmdbGenreIds)
+            ->map(fn($id) => $genreMap[$id] ?? null)
+            ->filter()
+            ->values()
+            ->all();
+
+        if (!empty($localGenreIds)) {
+            $film->genres()->sync($localGenreIds);
+        }
+    }
+
+    /**
      * Menyimpan atau memperbarui data film dari TMDB.
      */
     private function saveMovie($movie, $nowPlayingIds)
@@ -237,26 +295,46 @@ private function getMovieTrailer($tmdbId)
         if ($film) {
             $film->update($data);
         } else {
-            Film::create($data);
+            $film = Film::create($data);
         }
+
+        // Hubungkan genre film dari TMDB.
+        $genreMap = $this->syncGenresFromTMDB();
+
+        $this->syncFilmGenres(
+            $film,
+            $movie['genre_ids'] ?? [],
+            $genreMap
+        );
     }
 
     /**
-     * Halaman daftar film dan pencarian.
+     * Halaman daftar film, pencarian, filter genre, dan pengurutan.
      */
     public function index(Request $request)
     {
+        // Mengambil input filter
         $search = trim($request->input('search', ''));
         $status = $request->input('status');
+        $genreId = $request->input('genre_id');
+        $sort = $request->input('sort', 'latest');
 
+        // Mengambil daftar genre untuk dropdown
+        $genres = Genre::orderBy('name')->get();
+
+        // Query daftar film
         $films = Film::query()
             ->whereIn('status', ['Showing', 'Upcoming'])
+
+            // Filter status film
             ->when(
                 in_array($status, ['Showing', 'Upcoming']),
                 function ($query) use ($status) {
                     $query->where('status', $status);
                 }
             )
+
+            // Pencarian berdasarkan judul
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(
                     'title',
@@ -264,13 +342,41 @@ private function getMovieTrailer($tmdbId)
                     '%' . $search . '%'
                 );
             })
-            ->latest()
+
+            // Filter berdasarkan genre
+            ->when(
+                $genreId !== null && ctype_digit((string) $genreId),
+                function ($query) use ($genreId) {
+                    $query->whereHas('genres', function ($genreQuery) use ($genreId) {
+                        $genreQuery->where('genres.id', $genreId);
+                    });
+                }
+            )
+
+            // Pengurutan film
+            ->when(
+                $sort === 'oldest',
+                function ($query) {
+                    $query->oldest();
+                },
+                function ($query) {
+                    $query->latest();
+                }
+            )
+
             ->paginate(12)
             ->withQueryString();
 
         return view(
             'customer.films.index',
-            compact('films', 'search')
+            compact(
+                'films',
+                'search',
+                'status',
+                'genreId',
+                'sort',
+                'genres'
+            )
         );
     }
 
@@ -328,7 +434,6 @@ private function getMovieTrailer($tmdbId)
                 'status' => 'success',
                 'message' => "Berhasil mengambil $count film baru dari TMDB."
             ]);
-
         } catch (\Exception $e) {
             report($e);
 
@@ -348,6 +453,7 @@ private function getMovieTrailer($tmdbId)
             $count = 0;
             $apiCount = 0;
             $totalResults = 0;
+            $genreMap = $this->syncGenresFromTMDB();
 
             for ($page = 1; $page <= 5; $page++) {
                 $response = Http::timeout(20)->get(
@@ -408,9 +514,16 @@ private function getMovieTrailer($tmdbId)
                         }
                     }
 
-                    Film::updateOrCreate(
+                    $savedFilm = Film::updateOrCreate(
                         ['tmdb_id' => $movie['id']],
                         $filmData
+                    );
+
+                    // Hubungkan genre film Upcoming dari TMDB.
+                    $this->syncFilmGenres(
+                        $savedFilm,
+                        $movie['genre_ids'] ?? [],
+                        $genreMap
                     );
 
                     $count++;
@@ -431,7 +544,6 @@ private function getMovieTrailer($tmdbId)
                     'Upcoming'
                 )->count(),
             ]);
-
         } catch (\Exception $e) {
             report($e);
 
