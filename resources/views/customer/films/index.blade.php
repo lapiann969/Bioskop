@@ -60,6 +60,7 @@
             border-radius: 3px 3px 0 0;
         }
 
+
         /* FILTER FILM */
         .film-filter {
             background: #171717;
@@ -76,27 +77,42 @@
             align-items: center;
         }
 
+        /* Input dan Select */
         .film-search input,
         .film-search select {
             width: 100%;
             height: 40px;
             padding: 0 12px;
-            background: #222;
-            color: #fff;
+            background-color: #222 !important;
+            color: #fff !important;
             border: 1px solid #303030;
             border-radius: 7px;
             outline: none;
             font-size: 13px;
+            color-scheme: dark;
         }
 
+        /* Fokus Input dan Select */
         .film-search input:focus,
         .film-search select:focus {
+            background-color: #222 !important;
+            color: #fff !important;
             border-color: #facc15;
             box-shadow: 0 0 0 2px rgba(250, 204, 21, .12);
         }
 
+        /* Placeholder */
         .film-search input::placeholder {
             color: #888;
+        }
+
+        /* Autofill Chrome */
+        .film-search input:-webkit-autofill,
+        .film-search input:-webkit-autofill:hover,
+        .film-search input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #fff !important;
+            -webkit-box-shadow: 0 0 0 1000px #222 inset !important;
+            transition: background-color 9999s ease-in-out 0s;
         }
 
         .film-search select option {
@@ -104,6 +120,7 @@
             color: #fff;
         }
 
+        /* Tombol */
         .film-search button {
             height: 40px;
             background: #facc15;
@@ -119,6 +136,7 @@
             background: #eab308;
         }
 
+        /* Link Hapus Filter */
         .film-search a {
             color: #aaa;
             text-decoration: none;
@@ -158,6 +176,7 @@
                 font-size: 12px;
             }
         }
+
 
         .film-card {
             background: #343a40;
@@ -217,6 +236,48 @@
                 padding: 10px 8px;
             }
         }
+
+        /* Pagination TIX Bioskop */
+        .film-pagination .pagination {
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .film-pagination .page-link {
+            background-color: #171717;
+            color: #facc15;
+            border: 1px solid #51420b;
+            border-radius: 6px;
+            padding: 8px 13px;
+            transition: all 0.2s ease;
+        }
+
+        /* Hover */
+        .film-pagination .page-link:hover {
+            background-color: #facc15;
+            color: #171717;
+            border-color: #facc15;
+        }
+
+        /* Halaman aktif */
+        .film-pagination .page-item.active .page-link {
+            background-color: #facc15;
+            border-color: #facc15;
+            color: #171717;
+            font-weight: 700;
+        }
+
+        /* Tombol disabled */
+        .film-pagination .page-item.disabled .page-link {
+            background-color: #242424;
+            color: #777;
+            border-color: #383838;
+        }
+
+        /* Hilangkan efek focus bawaan */
+        .film-pagination .page-link:focus {
+            box-shadow: 0 0 0 0.15rem rgba(250, 204, 21, 0.2);
+        }
     </style>
 
     <div class="container my-4 film-page">
@@ -264,7 +325,7 @@
                 <input type="text" name="search" placeholder="Cari film..." value="{{ $search }}">
 
                 {{-- Filter genre --}}
-                <select name="genre_id">
+                <select name="genre_id" onchange="this.form.submit()">
                     <option value="">Semua Genre</option>
 
                     @foreach ($genres as $genre)
@@ -276,7 +337,7 @@
                 </select>
 
                 {{-- Pengurutan --}}
-                <select name="sort">
+                <select name="sort" onchange="this.form.submit()">
                     <option value="latest" {{ ($sort ?? 'latest') === 'latest' ? 'selected' : '' }}>
                         Terbaru
                     </option>
@@ -285,6 +346,7 @@
                         Terlama
                     </option>
                 </select>
+
 
                 {{-- Hapus filter --}}
                 <a href="{{ route('films.index') }}">
@@ -402,12 +464,11 @@
         </div>
 
         {{-- Pagination --}}
-        <div class="d-flex justify-content-center mt-3">
+        <div class="film-pagination d-flex justify-content-center mt-4 mb-4">
 
             {{ $films->links('pagination::bootstrap-5') }}
 
         </div>
-
     </div>
 
 @endsection

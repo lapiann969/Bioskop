@@ -24,7 +24,7 @@
                         <li><a href="{{ route('home') }}">Beranda</a></li>
                         <li><a href="{{ route('films.index') }}">Film</a></li>
                         @auth
-                            <li><a href="{{ route('history.index') }}">Riwayat Pemesanan</a></li>
+                            <li><a href="{{ route('history.index') }}">Riwayat</a></li>
                         @endauth
                     </ul>
                 </div>
@@ -46,7 +46,7 @@
                         <li>
                             <i class="bi bi-telephone-fill text-warning me-2"></i>
                             <a href="tel:+620000000000">
-                                +62 000-0000-0000
+                                +62 895-8089-56677
                             </a>
                         </li>
                     </ul>
@@ -83,7 +83,7 @@
 </footer>
 
 <style>
-    . .customer-footer {
+    .customer-footer {
         background: #080808;
         border-top: 1px solid #292929;
         color: #fff;
