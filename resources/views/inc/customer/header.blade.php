@@ -1,31 +1,61 @@
+
 @php
-    // Pilih film yang memiliki trailer terlebih dahulu.
-    $featuredFilm = $showingFilms->first(fn($film) => filled($film->trailer_url)) ?? $showingFilms->first();
+    // Ambil film yang memiliki trailer sebagai slide pertama.
+    $heroFilms = $showingFilms ?? collect();
 
-    // Ambil ID video YouTube.
-    $youtubeId = null;
+    $featuredFilm = $heroFilms->first(fn($film) => filled($film->trailer_url))
+        ?? $heroFilms->first();
 
-    if ($featuredFilm && $featuredFilm->trailer_url) {
-        $url = $featuredFilm->trailer_url;
-        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-
-        if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com'])) {
-            parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
-
-            if (!empty($query['v'])) {
-                $youtubeId = $query['v'];
-            } elseif (preg_match('~^/(embed|shorts)/([a-zA-Z0-9_-]+)~', $path, $matches)) {
-                $youtubeId = $matches[2];
-            }
-        } elseif ($host === 'youtu.be') {
-            $youtubeId = trim($path, '/');
-        }
-
-        if (!is_string($youtubeId) || !preg_match('/^[a-zA-Z0-9_-]{11}$/', $youtubeId)) {
-            $youtubeId = null;
-        }
+    // Pindahkan film unggulan ke posisi pertama.
+    if ($featuredFilm) {
+        $heroFilms = collect([$featuredFilm])
+            ->concat(
+                $heroFilms->reject(fn($film) => $film->id == $featuredFilm->id)
+            )
+            ->values();
     }
+
+    // Siapkan data semua slide.
+    $heroSlides = $heroFilms->map(function ($film) {
+
+        $youtubeId = null;
+
+        if ($film->trailer_url) {
+            $url = $film->trailer_url;
+            $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+            $path = parse_url($url, PHP_URL_PATH) ?? '';
+
+            if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com'])) {
+                parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
+
+                if (!empty($query['v'])) {
+                    $youtubeId = $query['v'];
+                } elseif (preg_match('~^/(embed|shorts)/([a-zA-Z0-9_-]+)~', $path, $matches)) {
+                    $youtubeId = $matches[2];
+                }
+            } elseif ($host === 'youtu.be') {
+                $youtubeId = trim($path, '/');
+            }
+
+            if (!is_string($youtubeId) || !preg_match('/^[a-zA-Z0-9_-]{11}$/', $youtubeId)) {
+                $youtubeId = null;
+            }
+        }
+
+        return [
+            'id' => $film->id,
+            'title' => $film->title,
+            'description' => \Illuminate\Support\Str::limit(
+                $film->description ?: 'Sinopsis film belum tersedia.',
+                250
+            ),
+            'poster_url' => $film->poster_url,
+            'schedule_url' => route('schedules.index', ['film_id' => $film->id]),
+            'youtube_id' => $youtubeId,
+        ];
+    })->values();
+
+    $firstSlide = $heroSlides->first();
 @endphp
 
 <style>
@@ -41,7 +71,6 @@
         background-position: center 30%;
     }
 
-    /* Lapisan gelap background */
     .hero-banner::before {
         content: "";
         position: absolute;
@@ -72,6 +101,18 @@
         padding: 150px 0 80px;
     }
 
+    /* Transisi pergantian konten */
+    .hero-slide-content {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity .35s ease, transform .35s ease;
+    }
+
+    .hero-slide-content.changing {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
     .hero-label {
         display: inline-block;
         background: #ffc629;
@@ -93,7 +134,6 @@
         margin-bottom: 18px;
     }
 
-    /* Sinopsis film */
     .hero-description {
         color: #e0e0e0;
         font-size: 15px;
@@ -181,53 +221,55 @@
     }
 </style>
 
-<section class="hero-banner"
-    @if ($featuredFilm && $featuredFilm->poster_url) style="background-image: url('{{ $featuredFilm->poster_url }}');" @endif>
+<section
+    class="hero-banner"
+    id="heroBanner"
+    @if ($firstSlide && $firstSlide['poster_url'])
+        style="background-image: url('{{ $firstSlide['poster_url'] }}');"
+    @endif
+>
 
     <div class="container hero-content">
 
-        <div class="row align-items-center">
+        <div class="row align-items-center hero-slide-content" id="heroSlideContent">
 
-            <!-- INFORMASI FILM -->
+            {{-- INFORMASI FILM --}}
             <div class="col-md-7">
 
                 <span class="hero-label">
                     NOW SHOWING
                 </span>
 
-                <!-- JUDUL FILM -->
-                <h1 class="hero-title">
-                    {{ $featuredFilm->title ?? 'Nikmati Pengalaman Menonton Terbaik' }}
+                <h1 class="hero-title" id="heroTitle">
+                    {{ $firstSlide['title'] ?? 'Nikmati Pengalaman Menonton Terbaik' }}
                 </h1>
 
-                <!-- SINOPSIS ASLI FILM -->
-                <p class="hero-description">
-                    @if ($featuredFilm && !empty($featuredFilm->description))
-                        {{ \Illuminate\Support\Str::limit($featuredFilm->description, 250) }}
-                    @else
-                        Sinopsis film belum tersedia.
-                    @endif
+                <p class="hero-description" id="heroDescription">
+                    {{ $firstSlide['description'] ?? 'Temukan film favoritmu di TIX Bioskop.' }}
                 </p>
 
-                <!-- TOMBOL -->
                 <div class="d-flex flex-wrap gap-3">
 
-                    @if ($featuredFilm)
-                        <a href="{{ route('schedules.index', ['film_id' => $featuredFilm->id]) }}"
-                            class="btn hero-btn-primary">
-                            PESAN SEKARANG
-                        </a>
-                    @endif
+                    <a
+                        href="{{ $firstSlide['schedule_url'] ?? '#' }}"
+                        class="btn hero-btn-primary"
+                        id="heroBookButton"
+                        @if (!$firstSlide) hidden @endif>
+                        PESAN SEKARANG
+                    </a>
 
-                    @if ($youtubeId)
-                        <button type="button" class="btn hero-btn-secondary" data-bs-toggle="modal"
-                            data-bs-target="#heroTrailerModal">
-                            <i class="fas fa-play me-2"></i>
-                            LIHAT TRAILER
-                        </button>
-                    @endif
+                    <button
+                        type="button"
+                        class="btn hero-btn-secondary"
+                        id="heroTrailerButton"
+                        data-bs-toggle="modal"
+                        data-bs-target="#heroTrailerModal"
+                        @if (!$firstSlide || !$firstSlide['youtube_id']) hidden @endif
+                    >
+                        <i class="fas fa-play me-2"></i>
+                        LIHAT TRAILER
+                    </button>
 
-                   
                 </div>
 
                 <div class="hero-brand">
@@ -236,12 +278,16 @@
 
             </div>
 
-            <!-- POSTER FILM -->
+            {{-- POSTER FILM --}}
             <div class="col-md-5 text-center">
 
-                @if ($featuredFilm && $featuredFilm->poster_url)
-                    <img src="{{ $featuredFilm->poster_url }}" alt="{{ $featuredFilm->title }}" class="hero-poster">
-                @endif
+                <img
+                    src="{{ $firstSlide['poster_url'] ?? '' }}"
+                    alt="{{ $firstSlide['title'] ?? 'Poster film' }}"
+                    class="hero-poster"
+                    id="heroPoster"
+                    @if (!$firstSlide || !$firstSlide['poster_url']) hidden @endif
+                >
 
             </div>
 
@@ -251,60 +297,169 @@
 
 </section>
 
-@if($youtubeId)
-    <div class="modal fade" id="heroTrailerModal"
-        tabindex="-1"
-        aria-labelledby="heroTrailerTitle"
-        aria-hidden="true">
+{{-- MODAL TRAILER --}}
+<div
+    class="modal fade"
+    id="heroTrailerModal"
+    tabindex="-1"
+    aria-labelledby="heroTrailerTitle"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-xl">
 
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content bg-dark text-white">
+        <div class="modal-content bg-dark text-white">
 
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title" id="heroTrailerTitle">
-                        Trailer {{ $featuredFilm->title }}
-                    </h5>
+            <div class="modal-header border-secondary">
 
-                    <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"
-                        aria-label="Close">
-                    </button>
-                </div>
+                <h5 class="modal-title" id="heroTrailerTitle">
+                    Trailer {{ $firstSlide['title'] ?? '' }}
+                </h5>
 
-                <div class="modal-body p-0">
-                    <div class="ratio ratio-16x9">
-                        <iframe
-                            id="heroTrailerFrame"
-                            data-src="https://www.youtube-nocookie.com/embed/{{ $youtubeId }}?autoplay=1&rel=0"
-                            src=""
-                            title="Trailer {{ $featuredFilm->title }}"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowfullscreen>
-                        </iframe>
-                    </div>
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+            <div class="modal-body p-0">
+
+                <div class="ratio ratio-16x9">
+
+                    <iframe
+                        id="heroTrailerFrame"
+                        src=""
+                        title="Trailer film"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen
+                    ></iframe>
+
                 </div>
 
             </div>
+
         </div>
+
     </div>
-@endif
+</div>
 
-@if($youtubeId)
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const modal = document.getElementById('heroTrailerModal');
-            const iframe = document.getElementById('heroTrailerFrame');
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
-            if (modal && iframe) {
-                modal.addEventListener('show.bs.modal', function () {
-                    iframe.src = iframe.dataset.src;
-                });
+    const slides = @json($heroSlides);
 
-                modal.addEventListener('hidden.bs.modal', function () {
-                    iframe.src = '';
-                });
+    if (!slides || slides.length === 0) {
+        return;
+    }
+
+    const banner = document.getElementById('heroBanner');
+    const content = document.getElementById('heroSlideContent');
+
+    const title = document.getElementById('heroTitle');
+    const description = document.getElementById('heroDescription');
+    const poster = document.getElementById('heroPoster');
+
+    const bookButton = document.getElementById('heroBookButton');
+    const trailerButton = document.getElementById('heroTrailerButton');
+
+    const modal = document.getElementById('heroTrailerModal');
+    const modalTitle = document.getElementById('heroTrailerTitle');
+    const iframe = document.getElementById('heroTrailerFrame');
+
+    let currentIndex = 0;
+    let slideTimer = null;
+
+    function showSlide(index) {
+
+        const slide = slides[index];
+
+        content.classList.add('changing');
+
+        setTimeout(function () {
+
+            title.textContent = slide.title;
+            description.textContent = slide.description;
+
+            // Ganti background banner.
+            banner.style.backgroundImage = slide.poster_url
+                ? `url(${JSON.stringify(slide.poster_url)})`
+                : 'none';
+
+            // Ganti poster.
+            if (slide.poster_url) {
+                poster.src = slide.poster_url;
+                poster.alt = slide.title;
+                poster.hidden = false;
+            } else {
+                poster.hidden = true;
             }
-        });
-    </script>
-@endif  
+
+            // Ganti tombol pesan.
+            bookButton.href = slide.schedule_url;
+            bookButton.hidden = !slide.schedule_url;
+
+            // Ganti tombol trailer.
+            trailerButton.hidden = !slide.youtube_id;
+
+            modalTitle.textContent = 'Trailer ' + slide.title;
+
+            content.classList.remove('changing');
+
+        }, 350);
+    }
+
+    function startSlideshow() {
+
+        if (slides.length <= 1 || slideTimer) {
+            return;
+        }
+
+        slideTimer = setInterval(function () {
+
+            currentIndex = (currentIndex + 1) % slides.length;
+
+            showSlide(currentIndex);
+
+        }, 6000);
+    }
+
+    function stopSlideshow() {
+
+        if (slideTimer) {
+            clearInterval(slideTimer);
+            slideTimer = null;
+        }
+    }
+
+    // Putar trailer dari film yang sedang tampil.
+    trailerButton.addEventListener('click', function () {
+
+        const slide = slides[currentIndex];
+
+        if (slide && slide.youtube_id) {
+            iframe.src =
+                'https://www.youtube-nocookie.com/embed/' +
+                slide.youtube_id +
+                '?autoplay=1&rel=0';
+        }
+
+    });
+
+    // Hentikan slideshow selama modal trailer terbuka.
+    modal.addEventListener('show.bs.modal', stopSlideshow);
+
+    modal.addEventListener('hidden.bs.modal', function () {
+
+        iframe.src = '';
+
+        startSlideshow();
+
+    });
+
+    // Mulai slideshow.
+    startSlideshow();
+
+});
+</script>
