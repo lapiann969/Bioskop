@@ -307,7 +307,6 @@ class FilmController extends Controller
             $genreMap
         );
     }
-
     /**
      * Halaman daftar film, pencarian, filter genre, dan pengurutan.
      */
@@ -559,7 +558,7 @@ class FilmController extends Controller
      */
     public function show($id)
     {
-        $film = Film::findOrFail($id);
+        $film = Film::with('genres')->findOrFail($id);
 
         return view('customer.films.show', compact('film'));
     }

@@ -39,16 +39,16 @@
 
 <div class="container my-5" style="padding-top: 60px;">
 
-    @if(session('error'))
+    @if (session('error'))
         <div class="alert alert-danger">
             {{ session('error') }}
         </div>
     @endif
 
-    @if($errors->any())
+    @if ($errors->any())
         <div class="alert alert-danger mb-3">
             <ul class="mb-0">
-                @foreach($errors->all() as $error)
+                @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
@@ -56,8 +56,7 @@
     @endif
 
     <div class="mb-4">
-        <a href="{{ route('schedules.index', ['film_id' => $schedule->film_id]) }}"
-           class="btn btn-outline-light btn-sm">
+        <a href="{{ route('schedules.index', ['film_id' => $schedule->film_id]) }}" class="btn btn-outline-light btn-sm">
             <i class="bi bi-arrow-left"></i> Kembali ke Jadwal
         </a>
     </div>
@@ -76,47 +75,36 @@
                     LAYAR BIOSKOP
                 </div>
 
-                <form action="{{ route('bookings.store') }}"
-                      method="POST"
-                      id="seatForm">
+                <form action="{{ route('bookings.store') }}" method="POST" id="seatForm">
                     @csrf
-
-                    <input type="hidden"
-                           name="schedule_id"
-                           value="{{ $schedule->id }}">
+                    <input type="hidden" name="schedule_id" value="{{ $schedule->id }}">
 
                     <div class="d-flex flex-wrap justify-content-center gap-2">
-
                         @forelse($seats as $seat)
                             @php
                                 $isBooked = in_array($seat->id, $bookedSeats);
                             @endphp
 
                             <div>
-                                <input
-                                    type="checkbox"
-                                    name="selected_seats[]"
-                                    value="{{ $seat->id }}"
-                                    id="seat-{{ $seat->id }}"
-                                    class="seat-checkbox"
-                                    data-seat-name="{{ $seat->seat_number }}"
-                                    {{ $isBooked ? 'disabled' : '' }}
-                                >
+                                <input type="checkbox"
+                                       name="selected_seats[]"
+                                       value="{{ $seat->id }}"
+                                       id="seat-{{ $seat->id }}"
+                                       class="seat-checkbox"
+                                       data-seat-name="{{ $seat->seat_number }}"
+                                       {{ $isBooked ? 'disabled' : '' }}>
 
-                                <label
-                                    for="seat-{{ $seat->id }}"
-                                    class="seat-label shadow-sm"
-                                    title="Kursi {{ $seat->seat_number }}">
+                                <label for="seat-{{ $seat->id }}"
+                                       class="seat-label shadow-sm"
+                                       title="Kursi {{ $seat->seat_number }}">
                                     {{ $seat->seat_number }}
                                 </label>
                             </div>
-
                         @empty
                             <p class="text-white-50">
                                 Data kursi belum tersedia untuk studio ini.
                             </p>
                         @endforelse
-
                     </div>
                 </form>
             </div>
@@ -124,20 +112,17 @@
             <!-- Keterangan Warna -->
             <div class="d-flex justify-content-center flex-wrap gap-4 mt-3 text-white">
                 <div>
-                    <span class="d-inline-block rounded"
-                          style="width:15px;height:15px;background:#444;"></span>
+                    <span class="d-inline-block rounded" style="width:15px;height:15px;background:#444;"></span>
                     Tersedia
                 </div>
 
                 <div>
-                    <span class="d-inline-block rounded"
-                          style="width:15px;height:15px;background:#ffc107;"></span>
+                    <span class="d-inline-block rounded" style="width:15px;height:15px;background:#ffc107;"></span>
                     Dipilih
                 </div>
 
                 <div>
-                    <span class="d-inline-block rounded"
-                          style="width:15px;height:15px;background:#28a745;"></span>
+                    <span class="d-inline-block rounded" style="width:15px;height:15px;background:#28a745;"></span>
                     Terisi
                 </div>
             </div>
@@ -145,9 +130,7 @@
 
         <!-- Ringkasan Pesanan -->
         <div class="col-lg-4">
-            <div class="card bg-black text-white border-secondary shadow sticky-top"
-                 style="top: 100px;">
-
+            <div class="card bg-black text-white border-secondary shadow sticky-top" style="top: 100px;">
                 <div class="card-body">
 
                     <h5 class="card-title text-warning fw-bold border-bottom border-secondary pb-3 mb-3">
@@ -174,8 +157,7 @@
 
                     <p class="mb-3">
                         <strong>Harga:</strong>
-                        Rp {{ number_format($schedule->price ?? 35000, 0, ',', '.') }}
-                        / tiket
+                        Rp {{ number_format($schedule->price ?? 35000, 0, ',', '.') }} / tiket
                     </p>
 
                     <hr class="border-secondary">
@@ -192,9 +174,7 @@
                         </span>
                     </p>
 
-                    <button type="button"
-                            onclick="submitBooking()"
-                            class="btn btn-warning w-100 fw-bold fs-5">
+                    <button type="button" onclick="submitBooking()" class="btn btn-warning w-100 fw-bold fs-5">
                         Lanjut Checkout
                         <i class="bi bi-arrow-right"></i>
                     </button>
@@ -210,46 +190,39 @@
     const checkboxes = document.querySelectorAll('.seat-checkbox:not(:disabled)');
     const selectedSeatsText = document.getElementById('selectedSeatsText');
     const totalPriceText = document.getElementById('totalPriceText');
-    const ticketPrice = {{ $schedule->price ?? 35000 }};
+    const seatForm = document.getElementById('seatForm');
+    const ticketPrice = Number(@json($schedule->price ?? 35000));
 
     function updateSummary() {
         const selected = [];
 
-        checkboxes.forEach(cb => {
-            if (cb.checked) {
-                selected.push(cb.getAttribute('data-seat-name'));
+        checkboxes.forEach(function(checkbox) {
+            if (checkbox.checked) {
+                selected.push(checkbox.dataset.seatName);
             }
         });
 
-        if (selected.length > 0) {
-            selectedSeatsText.textContent = selected.join(', ');
+        selectedSeatsText.textContent = selected.length > 0 ? selected.join(', ') : '-';
 
-            const total = selected.length * ticketPrice;
-
-            totalPriceText.textContent =
-                'Rp ' + total.toLocaleString('id-ID');
-        } else {
-            selectedSeatsText.textContent = '-';
-            totalPriceText.textContent = 'Rp 0';
-        }
+        const total = selected.length * ticketPrice;
+        totalPriceText.textContent = 'Rp ' + total.toLocaleString('id-ID');
     }
 
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateSummary);
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateSummary);
     });
 
-    // Jalankan sekali saat halaman dimuat (antisipasi browser mengingat centang setelah refresh)
-    updateSummary();
+    window.submitBooking = function() {
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
 
-    function submitBooking() {
-        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
-
-        if (!anyChecked) {
+        if (selectedCount === 0) {
             alert('Silakan pilih minimal 1 kursi terlebih dahulu!');
             return;
         }
 
-        document.getElementById('seatForm').submit();
-    }
+        seatForm.submit();
+    };
+
+    updateSummary();
 </script>
 @endsection
