@@ -1,7 +1,6 @@
-
 @extends('layouts.customer')
 
-@push('styles')
+@section('content')
 <style>
     .seat-checkbox {
         display: none;
@@ -37,10 +36,8 @@
         transform: perspective(200px) rotateX(-5deg);
     }
 </style>
-@endpush
 
-@section('content')
-<div class="container my-5">
+<div class="container my-5" style="padding-top: 60px;">
 
     @if(session('error'))
         <div class="alert alert-danger">
@@ -125,7 +122,7 @@
             </div>
 
             <!-- Keterangan Warna -->
-            <div class="d-flex justify-content-center flex-wrap gap-4 mt-3">
+            <div class="d-flex justify-content-center flex-wrap gap-4 mt-3 text-white">
                 <div>
                     <span class="d-inline-block rounded"
                           style="width:15px;height:15px;background:#444;"></span>
@@ -164,14 +161,14 @@
                     <p class="mb-1">
                         <strong>Tanggal:</strong>
                         {{ $schedule->show_time
-                            ? $schedule->show_time->format('d M Y')
+                            ? \Carbon\Carbon::parse($schedule->show_time)->format('d M Y')
                             : '-' }}
                     </p>
 
                     <p class="mb-1">
                         <strong>Jam:</strong>
                         {{ $schedule->show_time
-                            ? $schedule->show_time->format('H:i')
+                            ? \Carbon\Carbon::parse($schedule->show_time)->format('H:i')
                             : '-' }}
                     </p>
 
@@ -208,9 +205,7 @@
 
     </div>
 </div>
-@endsection
 
-@push('scripts')
 <script>
     const checkboxes = document.querySelectorAll('.seat-checkbox:not(:disabled)');
     const selectedSeatsText = document.getElementById('selectedSeatsText');
@@ -243,6 +238,9 @@
         cb.addEventListener('change', updateSummary);
     });
 
+    // Jalankan sekali saat halaman dimuat (antisipasi browser mengingat centang setelah refresh)
+    updateSummary();
+
     function submitBooking() {
         const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
 
@@ -254,4 +252,4 @@
         document.getElementById('seatForm').submit();
     }
 </script>
-@endpush
+@endsection
