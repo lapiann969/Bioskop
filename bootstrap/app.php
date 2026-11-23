@@ -12,6 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
+        // Mempercayai proxy Cloudflare agar Laravel mengenali koneksi HTTPS.
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR |
+                Request::HEADER_X_FORWARDED_HOST |
+                Request::HEADER_X_FORWARDED_PORT |
+                Request::HEADER_X_FORWARDED_PROTO
+        );
+
+        // Mengecualikan webhook Xendit dari pemeriksaan CSRF.
         $middleware->validateCsrfTokens(except: [
             'xendit/webhook',
         ]);

@@ -13,6 +13,8 @@ class Payment extends Model
         'amount',
         'status',
         'payment_url',
+        'payment_session_id',
+        'payment_request_id',
     ];
 
     protected function casts(): array
