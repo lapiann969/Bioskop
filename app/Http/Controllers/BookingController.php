@@ -353,6 +353,30 @@ class BookingController extends Controller
     }
 
     // ==========================================
+    // CEK STATUS PEMBAYARAN SECARA OTOMATIS
+    // ==========================================
+
+    public function paymentStatus(Booking $booking)
+    {
+        // Pastikan booking milik pengguna yang login.
+        abort_unless(
+            $booking->user_id === Auth::id(),
+            403
+        );
+
+        $booking->load('payment');
+
+        return response()->json([
+            'booking_status' => $booking->status,
+            'payment_status' => $booking->payment?->status,
+
+            'ticket_url' => $booking->status === 'Paid'
+                ? route('tickets.show', $booking)
+                : null,
+        ]);
+    }
+
+    // ==========================================
     // 5. REDIRECT SETELAH PEMBAYARAN
     // ==========================================
 

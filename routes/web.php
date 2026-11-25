@@ -105,6 +105,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/{code}', [BookingController::class, 'checkout'])
         ->name('checkout.show');
 
+    Route::get('/bookings/{booking}/payment-status',[BookingController::class, 'paymentStatus'])
+        ->name('bookings.payment-status');
+
     Route::get('/checkout/{code}/success', [BookingController::class, 'success'])
         ->name('checkout.success');
 
@@ -123,7 +126,7 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // ROUTE SINKRONISASI GENRE FILM
     // ==========================================
-   
+
 });
 
 // ==========================================
