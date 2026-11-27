@@ -1,4 +1,3 @@
-
 @extends('layouts.admin')
 
 @section('title', 'Kelola Booking')
@@ -10,7 +9,7 @@
         <h4 class="fw-bold mb-0">Daftar Booking</h4>
     </div>
 
-    @if(session('success'))
+    @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -63,7 +62,7 @@
                                         $status = strtolower($booking->status ?? '');
                                     @endphp
 
-                                    @if($status == 'paid' || $status == 'success')
+                                    @if ($status == 'paid' || $status == 'success')
                                         <span class="badge bg-success">
                                             {{ $booking->status }}
                                         </span>
@@ -105,7 +104,7 @@
         </div>
 
         <div class="card-footer bg-white">
-            {{ $bookings->links() }}
+            {{ $bookings->links('pagination::bootstrap-5') }}
         </div>
     </div>
 

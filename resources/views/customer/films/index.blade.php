@@ -357,7 +357,8 @@
 
         </form>
 
-        {{-- Informasi hasil --}}
+        <div id="film-results">
+            {{-- Informasi hasil --}}
         <div class="text-white-50 mb-3">
             @if ($search)
                 Hasil pencarian: "{{ $search }}"
@@ -469,6 +470,99 @@
             {{ $films->links('pagination::bootstrap-5') }}
 
         </div>
+        </div>
     </div>
 
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterForm = document.querySelector('.film-filter');
+            const searchInput = filterForm?.querySelector('input[name="search"]');
+            const resultsContainer = document.getElementById('film-results');
+
+            if (!filterForm || !searchInput || !resultsContainer) {
+                return;
+            }
+
+            let debounceTimer = null;
+            let activeController = null;
+
+            const buildFilterUrl = () => {
+                const params = new URLSearchParams();
+                const formData = new FormData(filterForm);
+
+                for (const [key, value] of formData.entries()) {
+                    const trimmed = typeof value === 'string' ? value.trim() : value;
+                    if (trimmed !== '') {
+                        params.set(key, trimmed);
+                    }
+                }
+
+                const targetUrl = new URL(filterForm.action, window.location.origin);
+                targetUrl.search = params.toString();
+                return targetUrl;
+            };
+
+            const fetchFilms = async (targetUrl) => {
+                if (activeController) {
+                    activeController.abort();
+                }
+
+                const controller = new AbortController();
+                activeController = controller;
+                resultsContainer.style.opacity = '0.6';
+
+                try {
+                    const response = await fetch(targetUrl.toString(), {
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'text/html',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const nextResults = doc.getElementById('film-results');
+
+                    if (!nextResults) {
+                        throw new Error('Container hasil film tidak ditemukan.');
+                    }
+
+                    resultsContainer.innerHTML = nextResults.innerHTML;
+                    window.history.replaceState(null, '', targetUrl.toString());
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    window.location.assign(targetUrl.toString());
+                } finally {
+                    if (activeController === controller) {
+                        activeController = null;
+                        resultsContainer.style.opacity = '';
+                    }
+                }
+            };
+
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    fetchFilms(buildFilterUrl());
+                }, 400);
+            });
+
+            filterForm.addEventListener('submit', () => {
+                clearTimeout(debounceTimer);
+                if (activeController) {
+                    activeController.abort();
+                }
+            });
+        });
+    </script>
+@endpush

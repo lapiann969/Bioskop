@@ -1,4 +1,3 @@
-
 @extends('layouts.admin')
 
 @section('title', 'Detail Booking')
@@ -9,8 +8,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0">Detail Booking</h4>
 
-        <a href="{{ route('admin.bookings.index') }}"
-            class="btn btn-secondary">
+        <a href="{{ route('admin.bookings.index') }}" class="btn btn-secondary">
             Kembali
         </a>
     </div>
@@ -49,6 +47,19 @@
                 </tr>
 
                 <tr>
+                    <th>Kursi</th>
+                    <td>
+                        @forelse($seats as $seat)
+                            <span class="badge bg-primary me-1">
+                                {{ $seat->seat_number }}
+                            </span>
+                        @empty
+                            -
+                        @endforelse
+                    </td>
+                </tr>
+
+                <tr>
                     <th>Status Booking</th>
                     <td>{{ $booking->status ?? '-' }}</td>
                 </tr>
@@ -58,34 +69,6 @@
                     <td>{{ $booking->payment->status ?? '-' }}</td>
                 </tr>
             </table>
-
-            <h5 class="fw-bold mt-4 mb-3">Detail Kursi</h5>
-
-            <div class="table-responsive">
-                <table class="table table-hover table-bordered">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>No</th>
-                            <th>Nama Kursi</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @forelse($booking->bookingDetails as $key => $detail)
-                            <tr>
-                                <td>{{ $key + 1 }}</td>
-                                <td>{{ $detail->seat->seat_number ?? '-' }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="2" class="text-center">
-                                    Belum ada detail kursi.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
 
         </div>
     </div>

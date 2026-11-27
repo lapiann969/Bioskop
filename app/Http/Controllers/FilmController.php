@@ -333,15 +333,15 @@ class FilmController extends Controller
                 }
             )
 
-            // Pencarian berdasarkan judul
+            // Pencarian otomatis berdasarkan awalan judul
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(
                     'title',
                     'like',
-                    '%' . $search . '%'
+                    $search . '%'
                 );
             })
-
+            
             // Filter berdasarkan genre
             ->when(
                 $genreId !== null && ctype_digit((string) $genreId),

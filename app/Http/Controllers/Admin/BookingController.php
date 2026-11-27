@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Seat;
 
 class BookingController extends Controller
 {
@@ -22,10 +23,14 @@ class BookingController extends Controller
             'user',
             'schedule.film',
             'schedule.studio',
-            'bookingDetails.seat',
             'payment',
         ]);
 
-        return view('admin.bookings.show', compact('booking'));
+        // Ambil kursi berdasarkan ID yang tersimpan di bookings.seats.
+        $seats = Seat::whereIn('id', $booking->seats ?? [])
+            ->orderBy('seat_number')
+            ->get();
+
+        return view('admin.bookings.show', compact('booking', 'seats'));
     }
 }
